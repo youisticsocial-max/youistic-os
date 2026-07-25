@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>White‑Label Builder</title>
+  <style>
+    .builder-container { max-width: 600px; margin: 2rem auto; padding: 1.5rem; background: var(--bg-card); border-radius: 4px; box-shadow: var(--shadow-md); }
+    .builder-container h2 { text-align: center; margin-bottom: 1rem; }
+    .builder-container label { display: block; margin-top: 1rem; font-weight: 600; }
+    .builder-container input, .builder-container select { width: 100%; padding: 0.5rem; margin-top: 0.3rem; border: 1px solid var(--border-color); border-radius: 2px; }
+    .builder-container .btn-primary { width: 100%; margin-top: 1.5rem; }
+    .preview-link { margin-top: 1rem; text-align: center; }
+    .preview-link a { display: inline-block; padding: 0.6rem 1.2rem; background: var(--primary-orange); color: #fff; border-radius: 2px; text-decoration: none; }
+  </style>
+  <link rel="stylesheet" crossorigin href="/assets/styles-D1IfpjVg.css">
+</head>
+<body>
+  <div class="builder-container">
+    <h2>Build White‑Label Preview</h2>
+    <form id="builderForm">
+      <label for="category">Category</label>
+      <select id="category" name="category" required>
+        <option value="" disabled selected>— Select a category —</option>
+        <option value="Hardware">🔧 Hardware</option>
+        <option value="CA-firm">📊 CA Firm</option>
+        <option value="Clinics">🏥 Clinics</option>
+        <option value="Handicraft">🎨 Handicraft</option>
+        <option value="Hotels">🏨 Hotels</option>
+        <option value="Modular-Kitchen">🍳 Modular Kitchen</option>
+        <option value="Property-Dealer">🏠 Property Dealer</option>
+        <option value="Restaurant">🍽️ Restaurant</option>
+        <option value="Security services">🛡️ Security Services</option>
+        <option value="school-and-coching">📚 School &amp; Coaching</option>
+        <option value="Solar-and-inverter">☀️ Solar &amp; Inverter</option>
+        <option value="Timber-and-plywood">🪵 Timber &amp; Plywood</option>
+        <option value="Travel-Agency">✈️ Travel Agency</option>
+        <option value="architect & interor designer">🏗️ Architect & Interior Designer</option>
+        <option value="Electronic">🔌 Electronic</option>
+        <option value="Pharma & surgical">💊 Pharma & Surgical</option>
+        <option value="cake & bakery">🎂 Cake & Bakery</option>
+        <option value="salons">💇 Salons</option>
+        <option value="Marriage garden">🎪 Marriage Garden</option>
+        <option value="ART & MUSIC & DANCE CLASSES">🎨 Art & Music & Dance Classes</option>
+        <option value="FURNITURE MANUFACTURER">🪑 Furniture Manufacturer</option>
+        <option value="Furniture">🛋️ Furniture</option>
+        <option value="LIGHTS & LAMPS">💡 Lights & Lamps</option>
+        <option value="packers & movers">📦 Packers & Movers</option>
+        <option value="Gym & Fitness">🏋️ Gym & Fitness</option>
+        <option value="FMCG">🛒 FMCG</option>
+        <option value="Kitchen Equipment and coolers">🍳 Kitchen Equipment and Coolers</option>
+        <option value="Home interior">🏠 Home Interior</option>
+        <option value="Sanitary & tile">🛁 Sanitary & Tile</option>
+        <option value="Jewellers">💎 Jewellers</option>
+        <option value="Clothing">👗 Clothing</option>
+        <option value="Events">🎉 Events</option>
+        <option value="advocate">⚖️ Advocate</option>
+      </select>
+
+      <label for="clientName">Client Name</label>
+      <input type="text" id="clientName" name="clientName" placeholder="Y‑Hospital" required />
+
+      <label for="clinicName">Business Name (CLINIC_NAME)</label>
+      <input type="text" id="clinicName" name="CLINIC_NAME" placeholder="Your Business" required />
+
+      <label for="logoUrl">Logo Image URL (LOGO_URL)</label>
+      <input type="url" id="logoUrl" name="LOGO_URL" placeholder="https://example.com/logo.png" required />
+
+      <label for="primaryColor">Primary Color (PRIMARY_COLOR)</label>
+      <input type="color" id="primaryColor" name="PRIMARY_COLOR" value="#1E3A8A" required />
+
+      <label for="phone">Phone Number (PHONE)</label>
+      <input type="tel" id="phone" name="PHONE" placeholder="+1‑555‑123‑4567" required />
+
+      <label for="address">Address (ADDRESS)</label>
+      <input type="text" id="address" name="ADDRESS" placeholder="123 Main St, City" required />
+
+      <label for="variant">Design Variant</label>
+      <select id="variant" name="variant" required>
+        <option value="" disabled selected>— Select a variant —</option>
+        <option value="variant-1">variant-1</option>
+        <option value="variant-2">variant-2</option>
+        <option value="variant-3">variant-3</option>
+      </select>
+
+      <label for="serverNumber">Select Active Server</label>
+      <select id="serverNumber" name="serverNumber" required>
+        <option value="" disabled selected>— Select a server —</option>
+        <option value="1">Server 1 (1)</option>
+        <option value="2">Server 2 (2)</option>
+        <option value="3">Server 3 (3)</option>
+        <option value="4">Server 4 (4)</option>
+      </select>
+
+      <button type="submit" class="btn btn-primary">Build Preview</button>
+    </form>
+    <div class="preview-link" id="previewLink" style="display:none;">
+      <a href="#" target="_blank" id="previewBtn">👉 View Live Client Site</a>
+    </div>
+  </div>
+
+  <script>
+    const form = document.getElementById('builderForm');
+    const previewDiv = document.getElementById('previewLink');
+    const previewBtn = document.getElementById('previewBtn');
+    const submitBtn = form.querySelector('button[type="submit"]');
+
+    // ✅ Production Render backend URL
+    const BACKEND_URL = 'https://youistic-automation-backend.onrender.com/build';
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      submitBtn.textContent = '⏳ Building...';
+      submitBtn.disabled = true;
+      previewDiv.style.display = 'none';
+
+      const data = {
+        category: form.category.value,
+        clientName: form.clientName.value,
+        variant: form.variant.value,
+        serverNumber: parseInt(form.serverNumber.value, 10),
+        fields: {
+          CLINIC_NAME: form.clinicName.value,
+          LOGO_URL: form.logoUrl.value,
+          PRIMARY_COLOR: form.primaryColor.value,
+          PHONE: form.phone.value,
+          ADDRESS: form.address.value,
+        },
+      };
+      try {
+        const resp = await fetch(BACKEND_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data),
+        });
+        if (!resp.ok) throw new Error('Server error: ' + resp.status);
+        const result = await resp.json();
+        previewBtn.href = result.previewUrl;
+        previewDiv.style.display = 'block';
+        submitBtn.textContent = '✅ Done! Build Again';
+      } catch (err) {
+        alert('Build failed: ' + err.message);
+        submitBtn.textContent = 'Build Preview';
+        console.error(err);
+      } finally {
+        submitBtn.disabled = false;
+      }
+    });
+  </script>
+
+</body>
+</html>

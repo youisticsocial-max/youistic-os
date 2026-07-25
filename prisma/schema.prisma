@@ -1,0 +1,450 @@
+// Youistic OS - Full Database Schema
+// Generated for: Sales MIS, Finance, CRM, Projects, Team Performance
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────────────────────
+// ENUMS
+// ─────────────────────────────────────────────
+
+enum UserRole {
+  ADMIN
+  BDE
+  SDR
+  EDITOR
+  SUPPORT
+  VIEWER
+}
+
+enum ServiceType {
+  FBP
+  TECH
+  HYBRID
+}
+
+enum ClientStatus {
+  ACTIVE
+  CHURNED
+  RENEWAL_DUE
+  ONBOARDING
+}
+
+enum LeadStatus {
+  NEW
+  PENDING
+  CALL_COMPLETED
+  WARM_LEAD
+  HOT_LEAD
+  PROPOSAL_SENT
+  NEGOTIATION
+  CONVERTED
+  NOT_INTERESTED
+}
+
+enum MeetingStatus {
+  SCHEDULED
+  COMPLETED
+  CANCELED
+  RESCHEDULED
+}
+
+enum DealStage {
+  LEAD
+  PROSPECT
+  PROPOSAL
+  NEGOTIATION
+  CLOSED_WON
+  CLOSED_LOST
+}
+
+enum TicketPriority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
+enum ExpenseCategory {
+  AD_SPEND
+  SERVER_EMI
+  SALARY
+  TOOLS
+  OFFICE
+  MISC
+}
+
+enum PaymentStatus {
+  PAID
+  PENDING
+  OVERDUE
+}
+
+enum ProjectType {
+  FBP
+  TECH
+  HYBRID
+}
+
+enum ProjectStatus {
+  PLANNING
+  IN_PROGRESS
+  REVIEW
+  DELIVERED
+  ON_HOLD
+}
+
+enum TaskStage {
+  TODO
+  IN_PROGRESS
+  REVIEW
+  DONE
+}
+
+enum TaskPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+// ─────────────────────────────────────────────
+// CORE: USERS (Team Members)
+// ─────────────────────────────────────────────
+
+model User {
+  id          String   @id @default(cuid())
+  name        String
+  email       String   @unique
+  role        UserRole @default(BDE)
+  department  String?
+  avatarUrl   String?
+  phone       String?
+  joiningDate DateTime?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  assignedClients    Client[]           @relation("AssignedBDE")
+  assignedLeads      Lead[]             @relation("AssignedSDR")
+  meetings           Meeting[]          @relation("MeetingHost")
+  deals              Deal[]
+  assignedTasks      Task[]
+  assignedTickets    SupportTicket[]
+  dailyReports       DailyReport[]
+  performanceMetrics PerformanceMetric[]
+
+  @@map("users")
+}
+
+// ─────────────────────────────────────────────
+// CRM: LEADS (Lead Pool)
+// ─────────────────────────────────────────────
+
+model Lead {
+  id              String      @id @default(cuid())
+  clientName      String
+  clientEmail     String?
+  clientPhone     String?
+  businessName    String?
+  service         String?
+  source          String?
+  comment         String?     @db.Text
+  imageUrl        String?
+  status          LeadStatus  @default(NEW)
+  
+  followUpDate    DateTime?
+  followUpNote    String?
+  
+  // FK
+  assignedSdrId   String?
+  assignedSdr     User?       @relation("AssignedSDR", fields: [assignedSdrId], references: [id])
+  
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  
+  @@map("leads")
+}
+
+// ─────────────────────────────────────────────
+// CRM: MEETINGS
+// ─────────────────────────────────────────────
+
+model Meeting {
+  id            String        @id @default(cuid())
+  title         String
+  meetingDate   DateTime
+  status        MeetingStatus @default(SCHEDULED)
+  notes         String?
+  
+  // Who is hosting/attending (CEO, BDE)
+  hostId        String
+  host          User          @relation("MeetingHost", fields: [hostId], references: [id])
+  
+  // Associated Lead or Client
+  leadId        String?
+  clientId      String?
+  
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  @@map("meetings")
+}
+
+// ─────────────────────────────────────────────
+// CRM: CLIENTS
+// ─────────────────────────────────────────────
+
+model Client {
+  id              String       @id @default(cuid())
+  companyName     String
+  contactPerson   String
+  email           String?
+  phone           String?
+  serviceType     ServiceType
+  billingModel    String?      @default("ONE_TIME")
+  contractValue   Float        @default(0)
+  renewalAmount   Float        @default(0)
+  salesCloseDate  DateTime?
+  renewalDate     DateTime?
+  status          ClientStatus @default(ACTIVE)
+  notes           String?
+  industry        String?
+  website         String?
+
+  // FK
+  assignedBdeId   String?
+  assignedBde     User?        @relation("AssignedBDE", fields: [assignedBdeId], references: [id])
+
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  // Relations
+  deals           Deal[]
+  projects        Project[]
+  supportTickets  SupportTicket[]
+  revenueEntries  RevenueEntry[]
+
+  @@map("clients")
+}
+
+// ─────────────────────────────────────────────
+// CRM: DEALS (Sales Pipeline)
+// ─────────────────────────────────────────────
+
+model Deal {
+  id          String    @id @default(cuid())
+  title       String
+  value       Float     @default(0)
+  stage       DealStage @default(LEAD)
+  closeDate   DateTime?
+  notes       String?
+  probability Int       @default(0) // 0–100%
+
+  // FKs
+  clientId    String
+  client      Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  bdeId       String
+  bde         User      @relation(fields: [bdeId], references: [id])
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@map("deals")
+}
+
+// ─────────────────────────────────────────────
+// CRM: SUPPORT TICKETS
+// ─────────────────────────────────────────────
+
+model SupportTicket {
+  id            String         @id @default(cuid())
+  title         String
+  clientName    String?
+  description   String?
+  priority      TicketPriority @default(MEDIUM)
+  status        TicketStatus   @default(OPEN)
+  resolvedAt    DateTime?
+  tags          String[]
+  createdByName String?        // e.g. "Kajal Sharma", "Suhani", "Kiyam", "CEO"
+
+  // FKs
+  clientId      String?
+  client        Client?        @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  assignedToId  String?
+  assignedTo    User?          @relation(fields: [assignedToId], references: [id])
+
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  comments      TicketComment[]
+
+  @@map("support_tickets")
+}
+
+model TicketComment {
+  id        String        @id @default(cuid())
+  content   String
+  ticketId  String
+  ticket    SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  authorId  String?
+  createdAt DateTime      @default(now())
+
+  @@map("ticket_comments")
+}
+
+// ─────────────────────────────────────────────
+// FINANCE: REVENUE
+// ─────────────────────────────────────────────
+
+model RevenueEntry {
+  id             String        @id @default(cuid())
+  amount         Float
+  paymentDate    DateTime
+  revenueType    ServiceType
+  invoiceNumber  String?
+  paymentStatus  PaymentStatus @default(PAID)
+  description    String?
+
+  // FK
+  clientId       String
+  client         Client        @relation(fields: [clientId], references: [id])
+
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  @@map("revenue_entries")
+}
+
+// ─────────────────────────────────────────────
+// FINANCE: EXPENSES
+// ─────────────────────────────────────────────
+
+model ExpenseEntry {
+  id          String          @id @default(cuid())
+  category    ExpenseCategory
+  amount      Float
+  expenseDate DateTime
+  description String?
+  vendor      String?
+  receiptUrl  String?
+
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  @@map("expense_entries")
+}
+
+// ─────────────────────────────────────────────
+// PROJECT MANAGEMENT: PROJECTS
+// ─────────────────────────────────────────────
+
+model Project {
+  id          String        @id @default(cuid())
+  name        String
+  description String?
+  type        ProjectType
+  status      ProjectStatus @default(PLANNING)
+  startDate   DateTime?
+  deadline    DateTime?
+  progress    Int           @default(0) // 0–100%
+
+  // FK
+  clientId    String
+  client      Client        @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  tasks       Task[]
+
+  @@map("projects")
+}
+
+// ─────────────────────────────────────────────
+// PROJECT MANAGEMENT: TASKS
+// ─────────────────────────────────────────────
+
+model Task {
+  id           String       @id @default(cuid())
+  title        String
+  description  String?
+  stage        TaskStage    @default(TODO)
+  priority     TaskPriority @default(MEDIUM)
+  dueDate      DateTime?
+  kanbanOrder  Int          @default(0)
+  tags         String[]
+
+  // FKs
+  projectId    String
+  project      Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  assignedToId String?
+  assignedTo   User?        @relation(fields: [assignedToId], references: [id])
+
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  @@map("tasks")
+}
+
+// ─────────────────────────────────────────────
+// TEAM PERFORMANCE: DAILY REPORTS (DSRs)
+// ─────────────────────────────────────────────
+
+model DailyReport {
+  id              String   @id @default(cuid())
+  reportDate      DateTime @default(now())
+  tasksCompleted  Json?    // Array of task descriptions
+  callsMade       Int      @default(0)
+  leadsGenerated  Int      @default(0)
+  meetingsHeld    Int      @default(0)
+  notes           String?
+  submittedAt     DateTime @default(now())
+
+  // FK
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt       DateTime @default(now())
+
+  @@map("daily_reports")
+}
+
+// ─────────────────────────────────────────────
+// TEAM PERFORMANCE: METRICS (Monthly Rollup)
+// ─────────────────────────────────────────────
+
+model PerformanceMetric {
+  id                 String   @id @default(cuid())
+  periodMonth        DateTime // First day of month
+  dealsClosedCount   Int      @default(0)
+  revenueGenerated   Float    @default(0)
+  ticketsResolved    Int      @default(0)
+  tasksCompleted     Int      @default(0)
+  closingRatio       Float    @default(0) // %
+  leadsGenerated     Int      @default(0)
+
+  // FK
+  userId             String
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@unique([userId, periodMonth])
+  @@map("performance_metrics")
+}

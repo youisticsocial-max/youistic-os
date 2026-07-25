@@ -1,0 +1,1725 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+  <title>Youistic Studio | Admin Dashboard</title>
+  <link rel="icon" type="image/png" href="/media/favicon.png" />
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts Outfit & Syne -->
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Outfit', sans-serif;
+    }
+    .font-syne {
+      font-family: 'Syne', sans-serif;
+    }
+  </style>
+  <link rel="stylesheet" crossorigin href="/assets/styles-D1IfpjVg.css">
+</head>
+
+<body class="bg-[#030712] text-slate-100 min-h-screen relative overflow-x-hidden">
+  
+  <!-- BACKGROUND GLOWS -->
+  <div class="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] rounded-full bg-indigo-500/10 blur-[150px] pointer-events-none"></div>
+  <div class="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] rounded-full bg-violet-600/10 blur-[150px] pointer-events-none"></div>
+
+  <!-- LOGIN PANEL -->
+  <div id="login-container" class="fixed inset-0 z-50 flex items-center justify-center bg-[#030712]/95 backdrop-blur-md">
+    <div class="w-full max-w-md p-8 bg-white/[0.02] border border-indigo-500/15 rounded-3xl backdrop-blur-xl shadow-2xl relative">
+      <div class="text-center mb-8">
+        <img src="/media/youistic.png" alt="Youistic Logo" class="h-8 mx-auto mb-4 object-contain" style="filter: brightness(0) invert(1) drop-shadow(0 0 6px rgba(99,102,241,0.5));" />
+        <h2 class="text-2xl font-bold font-syne text-white tracking-wide">Admin Access Portal</h2>
+        <p class="text-slate-400 text-sm mt-1">Enter your password to manage Youistic Studio</p>
+      </div>
+      
+      <form id="login-form" class="space-y-6">
+        <div>
+          <label class="block text-slate-400 text-xs uppercase tracking-wider mb-2 font-semibold">Security Password</label>
+          <input type="password" id="admin-password" placeholder="••••••••" class="w-full px-5 py-4 bg-white/5 border border-indigo-500/20 rounded-2xl text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500/60 focus:ring-1 focus:ring-indigo-500/60 transition-all duration-300" required />
+        </div>
+        <div id="login-error" class="hidden text-rose-400 text-sm text-center font-medium bg-rose-500/10 border border-rose-500/20 py-2.5 rounded-xl">
+          Incorrect security key. Please try again.
+        </div>
+        <button type="submit" class="w-full py-4 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-2xl shadow-lg shadow-indigo-600/20 transition-all duration-300 transform active:scale-95">
+          Verify &amp; Enter &rarr;
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- MAIN DASHBOARD CONTENT -->
+  <div id="dashboard-container" class="hidden min-h-screen flex flex-col">
+    <!-- Header -->
+    <header class="border-b border-indigo-500/10 bg-[#030712]/60 backdrop-blur-md sticky top-0 z-30 px-4 md:px-6 py-4 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <a href="index.html">
+          <img src="/media/youistic.png" alt="Youistic Logo" class="h-6 w-auto object-contain" style="filter: brightness(0) invert(1);" />
+        </a>
+        <div class="h-6 w-px bg-indigo-500/20"></div>
+        <span class="text-xs font-semibold bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 px-3 py-1 rounded-full uppercase tracking-wider">Studio Control</span>
+      </div>
+      
+      <!-- Desktop Actions -->
+      <div class="hidden md:flex items-center gap-4">
+        <button onclick="logout()" class="px-4 py-2 text-sm border border-indigo-500/20 hover:border-indigo-500/60 text-slate-400 hover:text-white rounded-xl transition-all duration-300">
+          Logout
+        </button>
+        <a href="index.html" target="_blank" class="px-4 py-2 text-sm bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-xl transition-all duration-300">
+          View Website &rarr;
+        </a>
+      </div>
+
+      <!-- Mobile Hamburger Button -->
+      <button onclick="toggleSidebar(true)" class="md:hidden p-1 -mr-1 text-slate-400 hover:text-white transition-colors focus:outline-none" aria-label="Open Menu">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+        </svg>
+      </button>
+    </header>
+
+    <!-- Sidebar Backdrop Overlay (Mobile only) -->
+    <div id="sidebar-backdrop" class="fixed inset-0 z-30 bg-[#030712]/80 backdrop-blur-sm hidden md:hidden" onclick="toggleSidebar(false)"></div>
+
+    <div class="flex flex-1 relative overflow-hidden flex-col md:flex-row">
+      <!-- Sidebar Navigation -->
+      <aside id="sidebar" class="fixed inset-y-0 left-0 z-40 w-64 border-r border-indigo-500/10 bg-[#090f1d] p-6 flex flex-col justify-between transform -translate-x-full transition-transform duration-300 ease-in-out md:translate-x-0 md:static md:w-64 md:bg-white/[0.01] md:z-auto md:h-auto">
+        <div class="space-y-6">
+          <!-- Mobile Sidebar Header -->
+          <div class="flex md:hidden justify-between items-center pb-4 border-b border-indigo-500/10">
+            <div class="flex items-center gap-2">
+              <img src="/media/youistic.png" alt="Youistic Logo" class="h-5 w-auto object-contain" style="filter: brightness(0) invert(1);" />
+              <span class="text-[10px] font-semibold bg-indigo-500/10 text-indigo-400 px-2 py-0.5 rounded-full uppercase tracking-wider">Control</span>
+            </div>
+            <button onclick="toggleSidebar(false)" class="p-2 text-slate-400 hover:text-white transition-colors focus:outline-none">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+
+          <!-- Nav Items -->
+          <div class="space-y-2">
+            <button onclick="switchTab('dashboard')" class="tab-btn active w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl text-left text-sm font-semibold transition-all duration-300" id="tab-dashboard-btn">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 6a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2H6a2 2 0 01-2-2v-4zM14 16a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2h-2a2 2 0 01-2-2v-4z"/></svg>
+              Dashboard Overview
+            </button>
+            <button onclick="switchTab('content')" class="tab-btn w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl text-left text-sm font-semibold transition-all duration-300" id="tab-content-btn">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+              Page &amp; Hero Content
+            </button>
+            <button onclick="switchTab('contacts')" class="tab-btn w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl text-left text-sm font-semibold transition-all duration-300" id="tab-contacts-btn">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 5a2 2 0 012-2h3.28a1 1 0 01.94.725l.548 2.2a1 1 0 01-.321.988l-1.305.98a10.582 10.582 0 004.872 4.872l.98-1.305a1 1 0 01.988-.321l2.2.548a1 1 0 01.725.94V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
+              Contacts &amp; Socials
+            </button>
+            <button onclick="switchTab('showcase')" class="tab-btn w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl text-left text-sm font-semibold transition-all duration-300" id="tab-showcase-btn">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+              Websites Showcase
+            </button>
+            <button onclick="switchTab('reels')" class="tab-btn w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl text-left text-sm font-semibold transition-all duration-300" id="tab-reels-btn">
+              <svg class="w-5 h-5 opacity-60" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+              Success Reels
+            </button>
+            <button onclick="switchTab('prompts')" class="tab-btn w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl text-left text-sm font-semibold transition-all duration-300" id="tab-prompts-btn">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+              Prompts Library
+            </button>
+            <button onclick="switchTab('planner')" class="tab-btn w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl text-left text-sm font-semibold transition-all duration-300" id="tab-planner-btn">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/></svg>
+              Project Planners
+              <span id="planner-count" class="ml-auto bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 text-xs px-2.5 py-0.5 rounded-full font-bold">0</span>
+            </button>
+            <button onclick="switchTab('referrals')" class="tab-btn w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl text-left text-sm font-semibold transition-all duration-300" id="tab-referrals-btn">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+              Referrals Manager
+              <span id="referrals-count" class="ml-auto bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 text-xs px-2.5 py-0.5 rounded-full font-bold">0</span>
+            </button>
+            <button onclick="switchTab('quick')" class="tab-btn w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl text-left text-sm font-semibold transition-all duration-300" id="tab-quick-btn">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
+              Quick Messages
+              <span id="quick-count" class="ml-auto bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 text-xs px-2.5 py-0.5 rounded-full font-bold">0</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Mobile Sidebar Footer Actions -->
+        <div class="mt-auto pt-6 border-t border-indigo-500/10 space-y-3 md:hidden">
+          <a href="index.html" target="_blank" class="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-xl transition-all duration-300 flex items-center justify-center gap-2">
+            View Website &rarr;
+          </a>
+          <button onclick="logout()" class="w-full py-3 border border-indigo-500/20 hover:border-indigo-500/60 text-slate-400 hover:text-white rounded-xl transition-all duration-300 flex items-center justify-center gap-2">
+            Logout
+          </button>
+        </div>
+      </aside>
+
+      <!-- Tab Content Space -->
+      <main class="flex-1 p-4 sm:p-8 space-y-6 sm:space-y-8 overflow-y-auto max-h-[calc(100vh-73px)] md:max-h-[calc(100vh-80px)]">
+        
+        <!-- =================== TAB: DASHBOARD =================== -->
+        <section id="tab-dashboard" class="tab-panel space-y-8">
+          <div>
+            <h2 class="text-3xl font-bold font-syne text-white">Dashboard Overview</h2>
+            <p class="text-slate-400 text-sm mt-1">Real-time statistics of user interactions and form actions</p>
+          </div>
+
+          <!-- Stats Grid -->
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="p-6 bg-white/[0.01] border border-indigo-500/10 rounded-3xl relative overflow-hidden">
+              <div class="absolute top-0 right-0 w-32 h-32 bg-indigo-500/5 blur-3xl rounded-full"></div>
+              <span class="text-slate-500 text-xs font-semibold uppercase tracking-wider block">Project Planners</span>
+              <span class="text-4xl font-extrabold text-white mt-2 block font-syne" id="stat-planner-count">0</span>
+              <span class="text-xs text-indigo-400 mt-2 block font-medium">Form Submissions (start.html)</span>
+            </div>
+            <div class="p-6 bg-white/[0.01] border border-indigo-500/10 rounded-3xl relative overflow-hidden">
+              <div class="absolute top-0 right-0 w-32 h-32 bg-indigo-500/5 blur-3xl rounded-full"></div>
+              <span class="text-slate-500 text-xs font-semibold uppercase tracking-wider block">Quick Contacts</span>
+              <span class="text-4xl font-extrabold text-white mt-2 block font-syne" id="stat-quick-count">0</span>
+              <span class="text-xs text-indigo-400 mt-2 block font-medium">Simple Messages (contact.html)</span>
+            </div>
+            <div class="p-6 bg-white/[0.01] border border-indigo-500/10 rounded-3xl relative overflow-hidden">
+              <div class="absolute top-0 right-0 w-32 h-32 bg-indigo-500/5 blur-3xl rounded-full"></div>
+              <span class="text-slate-500 text-xs font-semibold uppercase tracking-wider block">Custom Configurations</span>
+              <span class="text-4xl font-extrabold text-white mt-2 block font-syne" id="stat-config-saves">Active</span>
+              <span class="text-xs text-indigo-400 mt-2 block font-medium">Dynamic Content Injection Active</span>
+            </div>
+          </div>
+
+          <!-- Quick Actions -->
+          <div class="p-6 bg-white/[0.01] border border-indigo-500/10 rounded-3xl">
+            <h3 class="text-lg font-bold text-white mb-4 font-syne">Administrative Utilities</h3>
+            <div class="flex flex-wrap gap-4">
+              <button onclick="exportAllData()" class="px-5 py-3 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold rounded-xl transition-all duration-300">
+                Backup / Export Database Config
+              </button>
+              <button onclick="resetWholeConfig()" class="px-5 py-3 border border-rose-500/30 hover:bg-rose-500/10 text-rose-300 text-sm font-semibold rounded-xl transition-all duration-300">
+                Reset Site to Default HTML Content
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <!-- =================== TAB: CONTENT MANAGER =================== -->
+        <section id="tab-content" class="tab-panel hidden space-y-8">
+          <div>
+            <h2 class="text-3xl font-bold font-syne text-white">Edit Page &amp; Hero Content</h2>
+            <p class="text-slate-400 text-sm mt-1">Modify general textual resources and branding parameters</p>
+          </div>
+
+          <form id="form-content" class="space-y-6 max-w-3xl">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label class="block text-slate-400 text-sm mb-2 font-medium">Homepage Hero Line 1</label>
+                <input type="text" id="config-heroTitle1" placeholder="Let's Build" class="w-full px-4 py-3 bg-white/5 border border-indigo-500/15 rounded-xl text-white focus:outline-none focus:border-indigo-500/50" />
+              </div>
+              <div>
+                <label class="block text-slate-400 text-sm mb-2 font-medium">Homepage Hero Line 2</label>
+                <input type="text" id="config-heroTitle2" placeholder="Something Great." class="w-full px-4 py-3 bg-white/5 border border-indigo-500/15 rounded-xl text-white focus:outline-none focus:border-indigo-500/50" />
+              </div>
+            </div>
+            <div>
+              <label class="block text-slate-400 text-sm mb-2 font-medium">Homepage Hero Subtitle</label>
+              <textarea id="config-heroSub" rows="3" placeholder="Tell us about your brand goals, and we'll craft a customized digital marketing and solutions architecture." class="w-full px-4 py-3 bg-white/5 border border-indigo-500/15 rounded-xl text-white focus:outline-none focus:border-indigo-500/50" style="resize:none;"></textarea>
+            </div>
+            <div>
+              <label class="block text-slate-400 text-sm mb-2 font-medium">Studio Branding Logo URL / Path</label>
+              <input type="text" id="config-logoUrl" placeholder="/media/youistic.png" class="w-full px-4 py-3 bg-white/5 border border-indigo-500/15 rounded-xl text-white focus:outline-none focus:border-indigo-500/50" />
+              <p class="text-slate-500 text-xs mt-1.5">Note: Set file path relative to root directory (e.g. /media/youistic.png)</p>
+            </div>
+            <button type="submit" class="px-6 py-3.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl shadow-lg transition-all duration-300">
+              Save Content Config
+            </button>
+          </form>
+        </section>
+
+        <!-- =================== TAB: PROMPTS LIBRARY =================== -->
+        <section id="tab-prompts" class="tab-panel hidden space-y-6">
+          <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div>
+              <h2 class="text-3xl font-bold font-syne text-white">Prompts Library</h2>
+              <p class="text-slate-400 text-sm mt-1">Manage and copy your most useful design & generation prompts</p>
+            </div>
+            <button onclick="openAddPromptModal()" class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold rounded-xl transition-all duration-300 flex items-center gap-2">
+              + Add New Prompt
+            </button>
+          </div>
+
+          <!-- Prompts Grid List -->
+          <div id="prompts-grid" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Dynamic prompts will render here -->
+          </div>
+        </section>
+
+        <!-- =================== TAB: WEBSITES SHOWCASE =================== -->
+        <section id="tab-showcase" class="tab-panel hidden space-y-6">
+          <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div>
+              <h2 class="text-3xl font-bold font-syne text-white">Websites Showcase</h2>
+              <p class="text-slate-400 text-sm mt-1">Manage client websites shown in the homepage grid</p>
+            </div>
+            <button onclick="openAddWebModal()" class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold rounded-xl transition-all duration-300 flex items-center gap-2">
+              + Add New Website
+            </button>
+          </div>
+
+          <!-- Websites Table Grid List -->
+          <div class="border border-indigo-500/10 rounded-2xl overflow-hidden bg-white/[0.005] overflow-x-auto">
+            <table class="w-full text-left border-collapse text-sm">
+              <thead>
+                <tr class="border-b border-indigo-500/10 bg-indigo-500/5 text-slate-400 uppercase tracking-wider text-xs">
+                  <th class="px-6 py-4 font-semibold">Website Details</th>
+                  <th class="px-6 py-4 font-semibold">Tech Badges</th>
+                  <th class="px-6 py-4 font-semibold">Image path</th>
+                  <th class="px-6 py-4 font-semibold text-center">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="showcase-table-body" class="divide-y divide-indigo-500/10">
+                <!-- Dynamic rows -->
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- =================== TAB: SUCCESS REELS SHOWCASE =================== -->
+        <section id="tab-reels" class="tab-panel hidden space-y-6">
+          <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div>
+              <h2 class="text-3xl font-bold font-syne text-white">Success Reels Showcase</h2>
+              <p class="text-slate-400 text-sm mt-1">Manage client success reels shown on the homepage</p>
+            </div>
+            <button onclick="openAddReelModal()" class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold rounded-xl transition-all duration-300 flex items-center gap-2">
+              + Add New Reel
+            </button>
+          </div>
+
+          <!-- Reels Table List -->
+          <div class="border border-indigo-500/10 rounded-2xl overflow-hidden bg-white/[0.005] overflow-x-auto">
+            <table class="w-full text-left border-collapse text-sm">
+              <thead>
+                <tr class="border-b border-indigo-500/10 bg-indigo-500/5 text-slate-400 uppercase tracking-wider text-xs">
+                  <th class="px-6 py-4 font-semibold">Reel Details</th>
+                  <th class="px-6 py-4 font-semibold">Video Path / URL</th>
+                  <th class="px-6 py-4 font-semibold text-center">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="reels-table-body" class="divide-y divide-indigo-500/10">
+                <!-- Dynamic rows -->
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- =================== TAB: CONTACTS MANAGER =================== -->
+        <section id="tab-contacts" class="tab-panel hidden space-y-8">
+          <div>
+            <h2 class="text-3xl font-bold font-syne text-white">Contacts &amp; Social Profiles</h2>
+            <p class="text-slate-400 text-sm mt-1">Configure global email addresses, phone digits, offices, and handle links</p>
+          </div>
+
+          <form id="form-contacts" class="space-y-6 max-w-3xl">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label class="block text-slate-400 text-sm mb-2 font-medium">Studio Primary Email</label>
+                <input type="email" id="config-email" placeholder="hello@youistic.studio" class="w-full px-4 py-3 bg-white/5 border border-indigo-500/15 rounded-xl text-white focus:outline-none focus:border-indigo-500/50" />
+              </div>
+              <div>
+                <label class="block text-slate-400 text-sm mb-2 font-medium">Studio Primary Phone</label>
+                <input type="text" id="config-phone" placeholder="+91 98765 43210" class="w-full px-4 py-3 bg-white/5 border border-indigo-500/15 rounded-xl text-white focus:outline-none focus:border-indigo-500/50" />
+              </div>
+            </div>
+            <div>
+              <label class="block text-slate-400 text-sm mb-2 font-medium">Physical HQ Address</label>
+              <input type="text" id="config-address" placeholder="Jodhpur, Rajasthan, India" class="w-full px-4 py-3 bg-white/5 border border-indigo-500/15 rounded-xl text-white focus:outline-none focus:border-indigo-500/50" />
+            </div>
+            <div class="h-px bg-indigo-500/10 my-4"></div>
+            <h3 class="text-lg font-bold text-white font-syne">Social Profiles Links</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label class="block text-slate-400 text-sm mb-2 font-medium">Instagram Handle Link</label>
+                <input type="url" id="config-instagram" placeholder="https://www.instagram.com/youistic.studio" class="w-full px-4 py-3 bg-white/5 border border-indigo-500/15 rounded-xl text-white focus:outline-none focus:border-indigo-500/50" />
+              </div>
+              <div>
+                <label class="block text-slate-400 text-sm mb-2 font-medium">X / Twitter Handle Link</label>
+                <input type="url" id="config-twitter" placeholder="https://x.com/youistic" class="w-full px-4 py-3 bg-white/5 border border-indigo-500/15 rounded-xl text-white focus:outline-none focus:border-indigo-500/50" />
+              </div>
+              <div>
+                <label class="block text-slate-400 text-sm mb-2 font-medium">LinkedIn Page Link</label>
+                <input type="url" id="config-linkedin" placeholder="https://www.linkedin.com/company/youistic" class="w-full px-4 py-3 bg-white/5 border border-indigo-500/15 rounded-xl text-white focus:outline-none focus:border-indigo-500/50" />
+              </div>
+              <div>
+                <label class="block text-slate-400 text-sm mb-2 font-medium">YouTube Profile Link</label>
+                <input type="url" id="config-youtube" placeholder="https://youtube.com/@youistic" class="w-full px-4 py-3 bg-white/5 border border-indigo-500/15 rounded-xl text-white focus:outline-none focus:border-indigo-500/50" />
+              </div>
+            </div>
+            <button type="submit" class="px-6 py-3.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl shadow-lg transition-all duration-300">
+              Save Contacts Config
+            </button>
+          </form>
+        </section>
+
+        <!-- =================== TAB: PROJECT PLANNERS SUBMISSIONS =================== -->
+        <section id="tab-planner" class="tab-panel hidden space-y-6">
+          <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div>
+              <h2 class="text-3xl font-bold font-syne text-white">Project Planner Enquiries</h2>
+              <p class="text-slate-400 text-sm mt-1">Interactive roadmap requests submitted via start.html</p>
+            </div>
+            <button onclick="exportInquiries('planner')" class="px-4.5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-semibold rounded-xl transition-all duration-300 flex items-center gap-2">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+              Export CSV
+            </button>
+          </div>
+
+          <!-- Filters -->
+          <div class="flex gap-4">
+            <input type="text" id="planner-search" oninput="filterPlannerTable()" placeholder="Search by name, email or service..." class="w-full max-w-md px-4 py-3 bg-white/5 border border-indigo-500/15 rounded-xl text-white focus:outline-none focus:border-indigo-500/50 text-sm" />
+          </div>
+
+          <!-- Table Wrapper -->
+          <div class="border border-indigo-500/10 rounded-2xl overflow-hidden bg-white/[0.005] overflow-x-auto">
+            <table class="w-full text-left border-collapse text-sm">
+              <thead>
+                <tr class="border-b border-indigo-500/10 bg-indigo-500/5 text-slate-400 uppercase tracking-wider text-xs">
+                  <th class="px-6 py-4 font-semibold">Sender Details</th>
+                  <th class="px-6 py-4 font-semibold">Company Url</th>
+                  <th class="px-6 py-4 font-semibold">Service</th>
+                  <th class="px-6 py-4 font-semibold">Budget &amp; Timeline</th>
+                  <th class="px-6 py-4 font-semibold">Submission Date</th>
+                  <th class="px-6 py-4 font-semibold text-center">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="planner-table-body" class="divide-y divide-indigo-500/10">
+                <!-- Dynamic rows -->
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- =================== TAB: QUICK MESSAGES SUBMISSIONS =================== -->
+        <section id="tab-quick" class="tab-panel hidden space-y-6">
+          <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div>
+              <h2 class="text-3xl font-bold font-syne text-white">Direct Message Submissions</h2>
+              <p class="text-slate-400 text-sm mt-1">General contact enquiries submitted via contact.html</p>
+            </div>
+            <button onclick="exportInquiries('quick')" class="px-4.5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-semibold rounded-xl transition-all duration-300 flex items-center gap-2">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+              Export CSV
+            </button>
+          </div>
+
+          <!-- Filters -->
+          <div class="flex gap-4">
+            <input type="text" id="quick-search" oninput="filterQuickTable()" placeholder="Search by name, email or message content..." class="w-full max-w-md px-4 py-3 bg-white/5 border border-indigo-500/15 rounded-xl text-white focus:outline-none focus:border-indigo-500/50 text-sm" />
+          </div>
+
+          <!-- Table Wrapper -->
+          <div class="border border-indigo-500/10 rounded-2xl overflow-hidden bg-white/[0.005] overflow-x-auto">
+            <table class="w-full text-left border-collapse text-sm">
+              <thead>
+                <tr class="border-b border-indigo-500/10 bg-indigo-500/5 text-slate-400 uppercase tracking-wider text-xs">
+                  <th class="px-6 py-4 font-semibold w-1/4">Sender Info</th>
+                  <th class="px-6 py-4 font-semibold w-2/5">Message Content</th>
+                  <th class="px-6 py-4 font-semibold">Date Received</th>
+                  <th class="px-6 py-4 font-semibold text-center">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="quick-table-body" class="divide-y divide-indigo-500/10">
+                <!-- Dynamic rows -->
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- =================== TAB: REFERRALS MANAGER =================== -->
+        <section id="tab-referrals" class="tab-panel hidden space-y-6">
+          <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div>
+              <h2 class="text-3xl font-bold font-syne text-white">Referrals Manager</h2>
+              <p class="text-slate-400 text-sm mt-1">Manage partner referrals, discounts, and track commissions</p>
+            </div>
+            <button onclick="openAddReferralModal()" class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold rounded-xl transition-all duration-300 flex items-center gap-2">
+              + Add New Referral
+            </button>
+          </div>
+
+          <!-- Filters -->
+          <div class="flex gap-4">
+            <input type="text" id="referral-search" oninput="filterReferralTable()" placeholder="Search by name or code..." class="w-full max-w-md px-4 py-3 bg-white/5 border border-indigo-500/15 rounded-xl text-white focus:outline-none focus:border-indigo-500/50 text-sm" />
+          </div>
+
+          <!-- Table Wrapper -->
+          <div class="border border-indigo-500/10 rounded-2xl overflow-hidden bg-white/[0.005] overflow-x-auto">
+            <table class="w-full text-left border-collapse text-sm">
+              <thead>
+                <tr class="border-b border-indigo-500/10 bg-indigo-500/5 text-slate-400 uppercase tracking-wider text-xs">
+                  <th class="px-6 py-4 font-semibold">Partner Details</th>
+                  <th class="px-6 py-4 font-semibold">Referral Code</th>
+                  <th class="px-6 py-4 font-semibold">Commission / Discount</th>
+                  <th class="px-6 py-4 font-semibold">Uses</th>
+                  <th class="px-6 py-4 font-semibold text-center">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="referrals-table-body" class="divide-y divide-indigo-500/10">
+                <!-- Dynamic rows -->
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+      </main>
+    </div>
+  </div>
+
+  <div id="web-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-[#030712]/90 backdrop-blur-md hidden">
+    <div class="w-full max-w-lg mx-4 p-6 sm:p-8 bg-[#090f1d] border border-indigo-500/15 rounded-3xl backdrop-blur-xl shadow-2xl relative max-h-[90vh] overflow-y-auto">
+      <button onclick="closeWebModal()" class="absolute top-6 right-6 text-slate-400 hover:text-white transition-colors">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>
+      <h3 id="modal-title" class="text-xl font-bold font-syne text-white mb-6">Add Showcase Website</h3>
+      
+      <form id="web-form" class="space-y-5">
+        <input type="hidden" id="web-index" value="" />
+        <div>
+          <label class="block text-slate-400 text-xs uppercase tracking-wider mb-2 font-semibold">Website Title</label>
+          <input type="text" id="web-title" placeholder="LawYours" class="w-full px-4 py-3 bg-white/5 border border-indigo-500/15 rounded-xl text-white focus:outline-none focus:border-indigo-500/50 text-sm" required />
+        </div>
+        <div>
+          <label class="block text-slate-400 text-xs uppercase tracking-wider mb-2 font-semibold">Domain Address (e.g. lawyours.in)</label>
+          <input type="text" id="web-domain" placeholder="lawyours.in" class="w-full px-4 py-3 bg-white/5 border border-indigo-500/15 rounded-xl text-white focus:outline-none focus:border-indigo-500/50 text-sm" required />
+        </div>
+        <div>
+          <label class="block text-slate-400 text-xs uppercase tracking-wider mb-2 font-semibold">Technology Stack Badges (Comma-separated)</label>
+          <input type="text" id="web-tags" placeholder="Next.js, PostgreSQL, Tailwind" class="w-full px-4 py-3 bg-white/5 border border-indigo-500/15 rounded-xl text-white focus:outline-none focus:border-indigo-500/50 text-sm" required />
+        </div>
+        <div>
+          <label class="block text-slate-400 text-xs uppercase tracking-wider mb-2 font-semibold">Mock Screenshot (Upload Image or Enter Path)</label>
+          <div class="flex gap-3 items-center">
+            <input type="text" id="web-image" placeholder="/media/lawyours.png" class="flex-1 px-4 py-3 bg-white/5 border border-indigo-500/15 rounded-xl text-white focus:outline-none focus:border-indigo-500/50 text-sm" />
+            <span class="text-slate-500 text-xs font-semibold">OR</span>
+            <label class="px-4 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold transition-all duration-300 cursor-pointer select-none text-center whitespace-nowrap">
+              Upload Image
+              <input type="file" id="web-image-file" accept="image/*" class="hidden" onchange="handleImageUpload(event)" />
+            </label>
+          </div>
+          <p class="text-slate-500 text-xs mt-1">Leave empty to auto-generate a premium dark vector mockup!</p>
+          <div id="image-preview-container" class="hidden mt-3 p-3 border border-indigo-500/15 rounded-2xl bg-white/[0.02] flex items-center gap-3">
+            <img id="image-preview" src="" class="w-12 h-16 object-cover rounded-lg border border-indigo-500/20" />
+            <div class="text-xs">
+              <span class="text-white block font-semibold">Selected Local Image</span>
+              <button type="button" onclick="clearUploadedImage()" class="text-rose-400 hover:text-rose-300 font-bold mt-1">Remove Upload</button>
+            </div>
+          </div>
+        </div>
+        <div>
+          <label class="block text-slate-400 text-xs uppercase tracking-wider mb-2 font-semibold">Launch Redirect URL</label>
+          <input type="url" id="web-link" placeholder="https://lawyours.in" class="w-full px-4 py-3 bg-white/5 border border-indigo-500/15 rounded-xl text-white focus:outline-none focus:border-indigo-500/50 text-sm" required />
+        </div>
+        <button type="submit" class="w-full py-3.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl shadow-lg transition-all duration-300">
+          Save Website
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <div id="reel-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-[#030712]/90 backdrop-blur-md hidden">
+    <div class="w-full max-w-lg mx-4 p-6 sm:p-8 bg-[#090f1d] border border-indigo-500/15 rounded-3xl backdrop-blur-xl shadow-2xl relative max-h-[90vh] overflow-y-auto">
+      <button onclick="closeReelModal()" class="absolute top-6 right-6 text-slate-400 hover:text-white transition-colors">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>
+      <h3 id="reel-modal-title" class="text-xl font-bold font-syne text-white mb-6">Add Success Reel</h3>
+      
+      <form id="reel-form" class="space-y-5">
+        <input type="hidden" id="reel-index" value="" />
+        <div>
+          <label class="block text-slate-400 text-xs uppercase tracking-wider mb-2 font-semibold">Reel Title</label>
+          <input type="text" id="reel-title" placeholder="FinTech Scaleup" class="w-full px-4 py-3 bg-white/5 border border-indigo-500/15 rounded-xl text-white focus:outline-none focus:border-indigo-500/50 text-sm" required />
+        </div>
+        <div>
+          <label class="block text-slate-400 text-xs uppercase tracking-wider mb-2 font-semibold">Reel Subtitle (Metric)</label>
+          <input type="text" id="reel-subtitle" placeholder="99.99% Uptime" class="w-full px-4 py-3 bg-white/5 border border-indigo-500/15 rounded-xl text-white focus:outline-none focus:border-indigo-500/50 text-sm" required />
+        </div>
+        <div>
+          <label class="block text-slate-400 text-xs uppercase tracking-wider mb-2 font-semibold">Video Path / URL</label>
+          <input type="text" id="reel-video" placeholder="/media/reels_1_optimized.mp4" class="w-full px-4 py-3 bg-white/5 border border-indigo-500/15 rounded-xl text-white focus:outline-none focus:border-indigo-500/50 text-sm" required />
+        </div>
+        <button type="submit" class="w-full py-3.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl shadow-lg transition-all duration-300">
+          Save Success Reel
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <div id="prompt-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-[#030712]/90 backdrop-blur-md hidden">
+    <div class="w-full max-w-lg mx-4 p-6 sm:p-8 bg-[#090f1d] border border-indigo-500/15 rounded-3xl backdrop-blur-xl shadow-2xl relative max-h-[90vh] overflow-y-auto">
+      <button onclick="closePromptModal()" class="absolute top-6 right-6 text-slate-400 hover:text-white transition-colors">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>
+      <h3 id="prompt-modal-title" class="text-xl font-bold font-syne text-white mb-6">Add Prompt</h3>
+      
+      <form id="prompt-form" class="space-y-5">
+        <input type="hidden" id="prompt-index" value="" />
+        <div>
+          <label class="block text-slate-400 text-xs uppercase tracking-wider mb-2 font-semibold">Prompt Title / Purpose</label>
+          <input type="text" id="prompt-title" placeholder="Fintech Mockup Generator" class="w-full px-4 py-3 bg-white/5 border border-indigo-500/15 rounded-xl text-white focus:outline-none focus:border-indigo-500/50 text-sm" required />
+        </div>
+        <div>
+          <label class="block text-slate-400 text-xs uppercase tracking-wider mb-2 font-semibold">Category</label>
+          <select id="prompt-category" class="w-full px-4 py-3 bg-[#0d1527] border border-indigo-500/15 rounded-xl text-white focus:outline-none focus:border-indigo-500/50 text-sm" required>
+            <option value="Image Mockups">Image Mockups</option>
+            <option value="Video Reels">Video Reels</option>
+            <option value="Website Copy">Website Copy</option>
+            <option value="SEO & Social">SEO & Social</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-slate-400 text-xs uppercase tracking-wider mb-2 font-semibold">Prompt Content</label>
+          <textarea id="prompt-content" rows="6" placeholder="futuristic dark mode fintech dashboard mockup..." class="w-full px-4 py-3 bg-white/5 border border-indigo-500/15 rounded-xl text-white focus:outline-none focus:border-indigo-500/50 text-sm" style="resize:none;" required></textarea>
+        </div>
+        <button type="submit" class="w-full py-3.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl shadow-lg transition-all duration-300">
+          Save Prompt
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <div id="referral-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-[#030712]/90 backdrop-blur-md hidden">
+    <div class="w-full max-w-lg mx-4 p-6 sm:p-8 bg-[#090f1d] border border-indigo-500/15 rounded-3xl backdrop-blur-xl shadow-2xl relative max-h-[90vh] overflow-y-auto">
+      <button onclick="closeReferralModal()" class="absolute top-6 right-6 text-slate-400 hover:text-white transition-colors">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>
+      <h3 id="referral-modal-title" class="text-xl font-bold font-syne text-white mb-6">Add Referral Partner</h3>
+      
+      <form id="referral-form" class="space-y-5">
+        <input type="hidden" id="referral-index" value="" />
+        <div>
+          <label class="block text-slate-400 text-xs uppercase tracking-wider mb-2 font-semibold">Partner Name</label>
+          <input type="text" id="referral-name" placeholder="Eliyas" class="w-full px-4 py-3 bg-white/5 border border-indigo-500/15 rounded-xl text-white focus:outline-none focus:border-indigo-500/50 text-sm" required />
+        </div>
+        <div>
+          <label class="block text-slate-400 text-xs uppercase tracking-wider mb-2 font-semibold">Referral Code</label>
+          <input type="text" id="referral-code" placeholder="Eliyasyaar" class="w-full px-4 py-3 bg-white/5 border border-indigo-500/15 rounded-xl text-white focus:outline-none focus:border-indigo-500/50 text-sm" required />
+        </div>
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-slate-400 text-xs uppercase tracking-wider mb-2 font-semibold">Partner Commission</label>
+            <input type="text" id="referral-commission" placeholder="20%" class="w-full px-4 py-3 bg-white/5 border border-indigo-500/15 rounded-xl text-white focus:outline-none focus:border-indigo-500/50 text-sm" required />
+          </div>
+          <div>
+            <label class="block text-slate-400 text-xs uppercase tracking-wider mb-2 font-semibold">Client Discount</label>
+            <input type="text" id="referral-discount" placeholder="10% or $500" class="w-full px-4 py-3 bg-white/5 border border-indigo-500/15 rounded-xl text-white focus:outline-none focus:border-indigo-500/50 text-sm" required />
+          </div>
+        </div>
+        <button type="submit" class="w-full py-3.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl shadow-lg transition-all duration-300">
+          Save Referral
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <div id="planner-detail-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-[#030712]/90 backdrop-blur-md hidden">
+    <div class="w-full max-w-2xl mx-4 p-6 sm:p-8 bg-[#090f1d] border border-indigo-500/15 rounded-3xl backdrop-blur-xl shadow-2xl relative max-h-[90vh] overflow-y-auto">
+      <button onclick="closePlannerDetailModal()" class="absolute top-6 right-6 text-slate-400 hover:text-white transition-colors">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>
+      
+      <h3 class="text-xl font-bold font-syne text-white mb-6 border-b border-indigo-500/10 pb-4 flex items-center gap-2">
+        <span class="w-7 h-7 rounded-lg bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-xs flex items-center justify-center font-bold font-mono">🔍</span>
+        Client Inquiry Specs
+      </h3>
+      
+      <div class="space-y-6 text-sm">
+        <!-- Section 1: Sender Profile -->
+        <div class="bg-indigo-950/20 border border-indigo-500/10 rounded-2xl p-5 space-y-3">
+          <h4 class="text-xs uppercase font-extrabold tracking-widest text-slate-500">Sender Profile</h4>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <span class="text-xs text-slate-500 block">Name</span>
+              <span id="detail-name" class="font-bold text-white text-base">—</span>
+            </div>
+            <div>
+              <span class="text-xs text-slate-500 block">Email Address</span>
+              <a id="detail-email-link" href="#" class="font-mono text-indigo-400 hover:underline">—</a>
+            </div>
+            <div>
+              <span class="text-xs text-slate-500 block">Company Name</span>
+              <span id="detail-company" class="font-medium text-white">—</span>
+            </div>
+            <div>
+              <span class="text-xs text-slate-500 block">Website URL</span>
+              <a id="detail-website" href="#" target="_blank" class="text-indigo-400 hover:underline">—</a>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Section 2: Project Specifications -->
+        <div class="bg-indigo-950/20 border border-indigo-500/10 rounded-2xl p-5 space-y-3">
+          <h4 class="text-xs uppercase font-extrabold tracking-widest text-slate-500">Project Requirements</h4>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <span class="text-xs text-slate-500 block">Core Service Required</span>
+              <span id="detail-service" class="font-bold text-white text-base">—</span>
+            </div>
+            <div>
+              <span class="text-xs text-slate-500 block">Primary Project Goal</span>
+              <span id="detail-goal" class="font-bold text-indigo-400">—</span>
+            </div>
+            <div>
+              <span class="text-xs text-slate-500 block">Budget Tier</span>
+              <span id="detail-budget" class="font-bold text-white">—</span>
+            </div>
+            <div>
+              <span class="text-xs text-slate-500 block">Desired Timeline</span>
+              <span id="detail-timeline" class="font-bold text-white">—</span>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Section 3: Scoping Checklist -->
+        <div class="bg-indigo-950/20 border border-indigo-500/10 rounded-2xl p-5 space-y-3">
+          <h4 class="text-xs uppercase font-extrabold tracking-widest text-slate-500">Scope Checklist & Features</h4>
+          <div id="detail-features-badges" class="flex flex-wrap gap-1.5">
+            <!-- Dynamic Badges -->
+          </div>
+          <div>
+            <span class="text-[10px] uppercase font-bold tracking-wider text-slate-500 block mb-1">Details & Vision</span>
+            <p id="detail-scoping-desc" class="text-slate-300 bg-black/20 p-4 rounded-xl border border-indigo-500/5 leading-relaxed italic text-xs max-h-32 overflow-y-auto whitespace-pre-wrap">—</p>
+          </div>
+        </div>
+
+        <!-- Section 4: Extra Comments -->
+        <div class="bg-indigo-950/20 border border-indigo-500/10 rounded-2xl p-5 space-y-2">
+          <h4 class="text-xs uppercase font-extrabold tracking-widest text-slate-500">Additional Comments</h4>
+          <p id="detail-extra-comments" class="text-slate-300 leading-relaxed text-xs whitespace-pre-wrap bg-black/20 p-4 rounded-xl border border-indigo-500/5">—</p>
+        </div>
+        
+        <!-- Meta Info -->
+        <div class="flex justify-between items-center text-xs text-slate-500 px-1 pt-2">
+          <div>Submitted on <span id="detail-date" class="font-mono text-slate-400">—</span></div>
+          <button onclick="window.print()" class="text-indigo-400 hover:text-indigo-300 font-semibold flex items-center gap-1">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
+            Print Specs
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SUCCESS POPUP TOAST -->
+  <div id="toast" class="fixed bottom-6 right-6 z-50 transform translate-y-20 opacity-0 transition-all duration-300 bg-emerald-500 border border-emerald-400 text-white font-bold px-6 py-3.5 rounded-2xl shadow-xl flex items-center gap-3">
+    <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+    <span id="toast-message">Settings saved successfully!</span>
+  </div>
+
+  <!-- DASHBOARD CONTROL SCRIPTS -->
+  <script>
+    // Safe LocalStorage wrapper for mobile private browsing mode
+    try {
+      const testKey = '__storage_test__';
+      window.localStorage.setItem(testKey, testKey);
+      window.localStorage.removeItem(testKey);
+    } catch (e) {
+      console.warn('LocalStorage is disabled or private mode is active.');
+      const originalSetItem = window.localStorage.setItem;
+      window.localStorage.setItem = function(key, value) {
+        try {
+          originalSetItem.call(window.localStorage, key, value);
+        } catch (err) {
+          console.error('LocalStorage write blocked:', err);
+          if (typeof showToast === 'function') {
+            showToast('⚠️ Save failed! Please disable Private Browsing mode.');
+          } else {
+            alert('⚠️ Save failed! Please disable Private Browsing mode.');
+          }
+        }
+      };
+    }
+
+    // Utility for escaping HTML strings
+    function escapeHtml(str) {
+      if (!str) return '';
+      return str.toString()
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    // Sidebar visibility toggle (Mobile)
+    function toggleSidebar(open) {
+      const sidebar = document.getElementById('sidebar');
+      const backdrop = document.getElementById('sidebar-backdrop');
+      if (!sidebar || !backdrop) return;
+      
+      if (open) {
+        sidebar.classList.remove('-translate-x-full');
+        backdrop.classList.remove('hidden');
+      } else {
+        sidebar.classList.add('-translate-x-full');
+        backdrop.classList.add('hidden');
+      }
+    }
+
+    // Tab switching controller
+    function switchTab(tabId) {
+      document.querySelectorAll('.tab-panel').forEach(panel => panel.classList.add('hidden'));
+      document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active', 'bg-indigo-600', 'text-white'));
+      
+      const panelEl = document.getElementById('tab-' + tabId);
+      if (panelEl) panelEl.classList.remove('hidden');
+      
+      const activeBtn = document.getElementById('tab-' + tabId + '-btn');
+      if (activeBtn) {
+        activeBtn.classList.add('active', 'bg-indigo-600', 'text-white');
+      }
+      
+      // Close drawer on mobile after switching tabs
+      toggleSidebar(false);
+    }
+
+    // Trigger Notification Toast
+    function showToast(message) {
+      const toast = document.getElementById('toast');
+      const toastMsg = document.getElementById('toast-message');
+      toastMsg.textContent = message;
+      
+      toast.classList.remove('translate-y-20', 'opacity-0');
+      toast.classList.add('translate-y-0', 'opacity-1');
+      
+      setTimeout(() => {
+        toast.classList.remove('translate-y-0', 'opacity-1');
+        toast.classList.add('translate-y-20', 'opacity-0');
+      }, 3000);
+    }
+
+    // Login logic
+    document.getElementById('login-form').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const pw = document.getElementById('admin-password').value;
+      const errorMsg = document.getElementById('login-error');
+      
+      if (pw === '@Youearn42') {
+        sessionStorage.setItem('youistic_admin_auth', 'true');
+        document.getElementById('login-container').classList.add('hidden');
+        document.getElementById('dashboard-container').classList.remove('hidden');
+        loadData();
+      } else {
+        errorMsg.classList.remove('hidden');
+        setTimeout(() => {
+          errorMsg.classList.add('hidden');
+        }, 3000);
+      }
+    });
+
+    // Logout logic
+    function logout() {
+      sessionStorage.removeItem('youistic_admin_auth');
+      window.location.reload();
+    }
+
+    // Check Auth Status on Page Load
+    if (sessionStorage.getItem('youistic_admin_auth') === 'true') {
+      document.getElementById('login-container').classList.add('hidden');
+      document.getElementById('dashboard-container').classList.remove('hidden');
+      window.addEventListener('load', loadData);
+    }
+
+    // Save configuration settings
+    function getStoredConfig() {
+      return JSON.parse(localStorage.getItem('youistic_site_config') || '{}');
+    }
+
+    function saveStoredConfig(newConfig) {
+      const current = getStoredConfig();
+      const merged = { ...current, ...newConfig };
+      localStorage.setItem('youistic_site_config', JSON.stringify(merged));
+      showToast('Site settings updated successfully!');
+    }
+
+    // Form content saves
+    document.getElementById('form-content').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const fields = ['heroTitle1', 'heroTitle2', 'heroSub', 'logoUrl'];
+      const updates = {};
+      fields.forEach(field => {
+        const val = document.getElementById('config-' + field).value;
+        if (val.trim() !== '') updates[field] = val;
+      });
+      saveStoredConfig(updates);
+    });
+
+
+
+    document.getElementById('form-contacts').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const fields = ['email', 'phone', 'address', 'instagram', 'twitter', 'linkedin', 'youtube'];
+      const updates = {};
+      fields.forEach(field => {
+        const val = document.getElementById('config-' + field).value;
+        if (val.trim() !== '') updates[field] = val;
+      });
+      saveStoredConfig(updates);
+    });
+
+    // Load inputs defaults and lists
+    function loadData() {
+      const config = getStoredConfig();
+      
+      // Populate form fields
+      const allFields = [
+        'heroTitle1', 'heroTitle2', 'heroSub', 'logoUrl',
+        'email', 'phone', 'address', 'instagram', 'twitter', 'linkedin', 'youtube'
+      ];
+      allFields.forEach(field => {
+        const el = document.getElementById('config-' + field);
+        if (el && config[field]) {
+          el.value = config[field];
+        }
+      });
+      
+      // Load Referrals
+      const referrals = JSON.parse(localStorage.getItem('youistic_referrals') || '[]');
+      const referralsCount = document.getElementById('referrals-count');
+      if (referralsCount) referralsCount.textContent = referrals.length;
+      
+      // Planners & Quick messages
+      const planners = JSON.parse(localStorage.getItem('youistic_planner_inquiries') || '[]');
+      const quickMsgs = JSON.parse(localStorage.getItem('youistic_quick_inquiries') || '[]');
+      
+      const pCountBadge = document.getElementById('planner-count');
+      const qCountBadge = document.getElementById('quick-count');
+      const pStat = document.getElementById('stat-planner-count');
+      const qStat = document.getElementById('stat-quick-count');
+      
+      if (pCountBadge) pCountBadge.textContent = planners.length;
+      if (pStat) pStat.textContent = planners.length;
+      if (qCountBadge) qCountBadge.textContent = quickMsgs.length;
+      if (qStat) qStat.textContent = quickMsgs.length;
+
+      // Render Tables and Grids
+      renderShowcaseTable();
+      renderReelsTable();
+      renderPromptsGrid();
+      renderPlannerTable(planners);
+      renderQuickTable(quickMsgs);
+      renderReferralsTable();
+    }
+
+    // Default useful prompts templates
+    const defaultPrompts = [
+      {
+        title: "Fintech UI Mockup Prompt",
+        category: "Image Mockups",
+        content: "futuristic dark mode fintech dashboard mockup, glowing teal and purple charts, clean glassmorphism UI/UX layout, high-contrast dark theme, digital platform screenshot"
+      },
+      {
+        title: "Luxury E-commerce Mockup",
+        category: "Image Mockups",
+        content: "luxury streetwear e-commerce homepage layout, premium purple and black theme, sleek minimalist design, 3D fashion floating elements, high-end design mockup"
+      },
+      {
+        title: "AI Support Agent UI Mockup",
+        category: "Image Mockups",
+        content: "futuristic AI automation bot interface, neural network wireframe floating graphic, glowing violet and indigo tones, sleek tech platform dashboard UI"
+      },
+      {
+        title: "LawTech Gold Mockup Prompt",
+        category: "Image Mockups",
+        content: "modern dark mode legal tech platform dashboard, glowing gold scales of justice icon, dark blue and gold tech interface, glowing data charts, premium web screenshot UI"
+      }
+    ];
+
+    let promptsList = [];
+
+    function renderPromptsGrid() {
+      const config = getStoredConfig();
+      if (!config.savedPrompts) {
+        config.savedPrompts = [...defaultPrompts];
+        localStorage.setItem('youistic_site_config', JSON.stringify(config));
+      }
+      promptsList = config.savedPrompts;
+
+      const grid = document.getElementById('prompts-grid');
+      grid.innerHTML = '';
+
+      if (promptsList.length === 0) {
+        grid.innerHTML = `<div class="col-span-2 p-10 text-center text-slate-500 border border-dashed border-indigo-500/20 rounded-3xl">No prompts saved yet. Click "+ Add New Prompt" to start.</div>`;
+        return;
+      }
+
+      promptsList.forEach((item, index) => {
+        const card = document.createElement('div');
+        card.className = 'p-6 bg-white/[0.01] border border-indigo-500/10 rounded-3xl relative flex flex-col justify-between group';
+        card.innerHTML = `
+          <div>
+            <div class="flex justify-between items-start mb-4">
+              <span class="text-xs font-semibold bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 px-3 py-1 rounded-full uppercase tracking-wider">${item.category}</span>
+              <div class="flex gap-2">
+                <button onclick="openEditPromptModal(${index})" class="text-indigo-400 hover:text-indigo-300 text-xs font-semibold">Edit</button>
+                <button onclick="deletePrompt(${index})" class="text-rose-400 hover:text-rose-300 text-xs font-semibold">Delete</button>
+              </div>
+            </div>
+            <h3 class="text-lg font-bold text-white font-syne mb-2.5">${item.title}</h3>
+            <div class="relative bg-black/30 border border-indigo-500/5 rounded-2xl p-4 text-xs text-slate-300 font-mono select-all break-words max-h-32 overflow-y-auto mb-4 scrollbar-thin">
+              ${item.content}
+            </div>
+          </div>
+          <button onclick="copyPromptToClipboard(${index}, this)" class="w-full py-2.5 border border-indigo-500/20 hover:border-indigo-500/60 text-indigo-300 hover:text-white rounded-xl text-xs font-semibold transition-all duration-300 flex items-center justify-center gap-1.5">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m-6 4h6m-6 4h6"/></svg>
+            Copy Prompt
+          </button>
+        `;
+        grid.appendChild(card);
+      });
+    }
+
+    function openAddPromptModal() {
+      document.getElementById('prompt-modal-title').textContent = "Add Prompt";
+      document.getElementById('prompt-form').reset();
+      document.getElementById('prompt-index').value = "";
+      document.getElementById('prompt-modal').classList.remove('hidden');
+    }
+
+    function openEditPromptModal(index) {
+      const item = promptsList[index];
+      document.getElementById('prompt-modal-title').textContent = "Edit Prompt";
+      document.getElementById('prompt-index').value = index;
+      
+      document.getElementById('prompt-title').value = item.title;
+      document.getElementById('prompt-category').value = item.category;
+      document.getElementById('prompt-content').value = item.content;
+
+      document.getElementById('prompt-modal').classList.remove('hidden');
+    }
+
+    function closePromptModal() {
+      document.getElementById('prompt-modal').classList.add('hidden');
+    }
+
+    // Handle Form Submit
+    document.getElementById('prompt-form').addEventListener('submit', (e) => {
+      e.preventDefault();
+      
+      const index = document.getElementById('prompt-index').value;
+      const title = document.getElementById('prompt-title').value;
+      const category = document.getElementById('prompt-category').value;
+      const content = document.getElementById('prompt-content').value;
+
+      const promptData = { title, category, content };
+
+      const config = getStoredConfig();
+      if (!config.savedPrompts) {
+        config.savedPrompts = [...defaultPrompts];
+      }
+
+      if (index === "") {
+        // Add new
+        config.savedPrompts.push(promptData);
+      } else {
+        // Edit existing
+        config.savedPrompts[parseInt(index)] = promptData;
+      }
+
+      localStorage.setItem('youistic_site_config', JSON.stringify(config));
+      closePromptModal();
+      renderPromptsGrid();
+      showToast('Prompt saved successfully!');
+    });
+
+    function deletePrompt(index) {
+      if (!confirm('Are you sure you want to delete this prompt?')) return;
+      
+      const config = getStoredConfig();
+      if (config.savedPrompts) {
+        config.savedPrompts.splice(index, 1);
+        localStorage.setItem('youistic_site_config', JSON.stringify(config));
+        renderPromptsGrid();
+        showToast('Prompt removed.');
+      }
+    }
+
+    function copyPromptToClipboard(index, btn) {
+      const item = promptsList[index];
+      navigator.clipboard.writeText(item.content).then(() => {
+        const originalText = btn.innerHTML;
+        btn.innerHTML = `<svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg> Copied!`;
+        btn.classList.add('border-emerald-500/40', 'text-emerald-400');
+        showToast('Prompt copied to clipboard!');
+        
+        setTimeout(() => {
+          btn.innerHTML = originalText;
+          btn.classList.remove('border-emerald-500/40', 'text-emerald-400');
+        }, 2000);
+      }).catch(err => {
+        console.error('Could not copy text: ', err);
+      });
+    }
+
+    // Showcase websites default templates
+    const defaultWebsites = [
+      {
+        title: "LawYours",
+        domain: "lawyours.in",
+        tags: "Next.js, Vercel Analytics, Clarity",
+        image: "/media/lawyours_in.jpeg",
+        link: "https://lawyours.in"
+      }
+    ];
+
+    let showcaseList = [];
+
+    function renderShowcaseTable() {
+      const config = getStoredConfig();
+      const hasOldWebsites = config.portfolioWebsites && config.portfolioWebsites.some(w => w.title === "Aura Finance" || w.title === "Velour Label" || w.title === "Synapse AI");
+      if (!config.portfolioWebsites || config.portfolioWebsites.length === 0 || hasOldWebsites) {
+        // Init with default values
+        config.portfolioWebsites = [...defaultWebsites];
+        localStorage.setItem('youistic_site_config', JSON.stringify(config));
+      }
+      showcaseList = config.portfolioWebsites;
+
+      const tbody = document.getElementById('showcase-table-body');
+      tbody.innerHTML = '';
+
+      showcaseList.forEach((item, index) => {
+        const row = document.createElement('tr');
+        row.className = 'hover:bg-white/[0.01] transition-all duration-200';
+        row.innerHTML = `
+          <td class="px-6 py-4">
+            <div class="font-bold text-white">${item.title}</div>
+            <div class="text-xs text-indigo-400 font-mono mt-0.5">${item.domain}</div>
+          </td>
+          <td class="px-6 py-4">
+            <div class="flex flex-wrap gap-1">
+              ${(item.tags || '').split(',').map(t => `<span class="bg-indigo-500/10 text-indigo-300 text-xs px-2 py-0.5 rounded border border-indigo-500/20">${t.trim()}</span>`).join('')}
+            </div>
+          </td>
+          <td class="px-6 py-4 text-xs text-slate-400 font-mono max-w-[120px] sm:max-w-xs truncate">
+            ${item.image && item.image.trim() !== '' ? item.image : '<span class="text-indigo-400 font-semibold">[Auto Mockup]</span>'}
+          </td>
+          <td class="px-6 py-4 text-center space-x-2">
+            <button onclick="openEditWebModal(${index})" class="px-3 py-1.5 bg-indigo-500/10 hover:bg-indigo-500 text-indigo-300 hover:text-white rounded-lg border border-indigo-500/20 text-xs font-semibold transition-all duration-200">
+              Edit
+            </button>
+            <button onclick="deleteWebsite(${index})" class="px-3 py-1.5 bg-rose-500/10 hover:bg-rose-500 text-rose-400 hover:text-white rounded-lg border border-rose-500/20 text-xs font-semibold transition-all duration-200">
+              Delete
+            </button>
+          </td>
+        `;
+        tbody.appendChild(row);
+      });
+    }
+
+    let uploadedBase64 = "";
+
+    function handleImageUpload(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      // Ensure file is an image and within size limit (e.g. 1.5MB for localStorage safety)
+      if (file.size > 1500000) {
+        alert("Image is too large! Please choose an image smaller than 1.5MB to save space.");
+        e.target.value = "";
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = function(evt) {
+        uploadedBase64 = evt.target.result;
+        document.getElementById('image-preview').src = uploadedBase64;
+        document.getElementById('image-preview-container').classList.remove('hidden');
+        document.getElementById('web-image').value = ""; // Clear path field
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function clearUploadedImage() {
+      uploadedBase64 = "";
+      document.getElementById('image-preview').src = "";
+      document.getElementById('image-preview-container').classList.add('hidden');
+      document.getElementById('web-image-file').value = "";
+    }
+
+    function openAddWebModal() {
+      document.getElementById('modal-title').textContent = "Add Showcase Website";
+      document.getElementById('web-form').reset();
+      document.getElementById('web-index').value = "";
+      clearUploadedImage();
+      document.getElementById('web-modal').classList.remove('hidden');
+    }
+
+    function openEditWebModal(index) {
+      const item = showcaseList[index];
+      document.getElementById('modal-title').textContent = "Edit Showcase Website";
+      document.getElementById('web-index').value = index;
+      
+      document.getElementById('web-title').value = item.title;
+      document.getElementById('web-domain').value = item.domain;
+      document.getElementById('web-tags').value = item.tags;
+      document.getElementById('web-link').value = item.link;
+
+      clearUploadedImage();
+      if (item.image && item.image.startsWith('data:image/')) {
+        uploadedBase64 = item.image;
+        document.getElementById('image-preview').src = uploadedBase64;
+        document.getElementById('image-preview-container').classList.remove('hidden');
+        document.getElementById('web-image').value = "";
+      } else {
+        document.getElementById('web-image').value = item.image || "";
+      }
+
+      document.getElementById('web-modal').classList.remove('hidden');
+    }
+
+    function closeWebModal() {
+      document.getElementById('web-modal').classList.add('hidden');
+    }
+
+    // Handle Form Submit
+    document.getElementById('web-form').addEventListener('submit', (e) => {
+      e.preventDefault();
+      
+      const index = document.getElementById('web-index').value;
+      const title = document.getElementById('web-title').value;
+      const domain = document.getElementById('web-domain').value;
+      const tags = document.getElementById('web-tags').value;
+      const imageText = document.getElementById('web-image').value;
+      const link = document.getElementById('web-link').value;
+
+      const image = uploadedBase64 !== "" ? uploadedBase64 : imageText;
+      const websiteData = { title, domain, tags, image, link };
+
+      const config = getStoredConfig();
+      if (!config.portfolioWebsites) {
+        config.portfolioWebsites = [...defaultWebsites];
+      }
+
+      if (index === "") {
+        // Add new
+        config.portfolioWebsites.push(websiteData);
+      } else {
+        // Edit existing
+        config.portfolioWebsites[parseInt(index)] = websiteData;
+      }
+
+      localStorage.setItem('youistic_site_config', JSON.stringify(config));
+      closeWebModal();
+      renderShowcaseTable();
+      showToast('Website showcase saved successfully!');
+    });
+
+    function deleteWebsite(index) {
+      if (!confirm('Are you sure you want to remove this website from the showcase list?')) return;
+      
+      const config = getStoredConfig();
+      if (config.portfolioWebsites) {
+        config.portfolioWebsites.splice(index, 1);
+        localStorage.setItem('youistic_site_config', JSON.stringify(config));
+        renderShowcaseTable();
+        showToast('Website showcase item deleted.');
+      }
+    }
+
+    // Success Reels dynamic management
+    const defaultReels = [
+      {
+        title: "Vishnu Traders",
+        subtitle: "Home & life style",
+        video: "/media/reels_1_optimized.mp4"
+      },
+      {
+        title: "Good Health",
+        subtitle: "Diagnostic Center",
+        video: "/media/reels_2_optimized.mp4"
+      },
+      {
+        title: "New shop",
+        subtitle: "Grocery store",
+        video: "/media/reels_4_optimized.mp4"
+      },
+      {
+        title: "Vijay Restaurant",
+        subtitle: "Restaurant",
+        video: "/media/reels_5_optimized.mp4"
+      }
+    ];
+
+    let reelsList = [];
+
+    function renderReelsTable() {
+      const config = getStoredConfig();
+      const hasOldPaths = config.successReels && config.successReels.some(r => r.video && r.video.includes('Reels ('));
+      if (!config.successReels || (config.successReels.length > 0 && (config.successReels[0].title === "FinTech Scaleup" || hasOldPaths))) {
+        config.successReels = [...defaultReels];
+        localStorage.setItem('youistic_site_config', JSON.stringify(config));
+      }
+      reelsList = config.successReels;
+
+      const tbody = document.getElementById('reels-table-body');
+      if (!tbody) return;
+      tbody.innerHTML = '';
+
+      reelsList.forEach((item, index) => {
+        const row = document.createElement('tr');
+        row.className = 'hover:bg-white/[0.01] transition-all duration-200';
+        row.innerHTML = `
+          <td class="px-6 py-4">
+            <div class="font-bold text-white">${escapeHtml(item.title)}</div>
+            <div class="text-xs text-indigo-400 font-mono mt-0.5">${escapeHtml(item.subtitle)}</div>
+          </td>
+          <td class="px-6 py-4 text-xs text-slate-400 font-mono select-all max-w-[120px] sm:max-w-xs truncate">
+            ${escapeHtml(item.video)}
+          </td>
+          <td class="px-6 py-4 text-center space-x-2">
+            <button onclick="openEditReelModal(${index})" class="px-3 py-1.5 bg-indigo-500/10 hover:bg-indigo-500 text-indigo-300 hover:text-white rounded-lg border border-indigo-500/20 text-xs font-semibold transition-all duration-200">
+              Edit
+            </button>
+            <button onclick="deleteReel(${index})" class="px-3 py-1.5 bg-rose-500/10 hover:bg-rose-500 text-rose-400 hover:text-white rounded-lg border border-rose-500/20 text-xs font-semibold transition-all duration-200">
+              Delete
+            </button>
+          </td>
+        `;
+        tbody.appendChild(row);
+      });
+    }
+
+    function openAddReelModal() {
+      document.getElementById('reel-modal-title').textContent = "Add Success Reel";
+      document.getElementById('reel-form').reset();
+      document.getElementById('reel-index').value = "";
+      document.getElementById('reel-modal').classList.remove('hidden');
+    }
+
+    function openEditReelModal(index) {
+      const item = reelsList[index];
+      if (!item) return;
+      document.getElementById('reel-modal-title').textContent = "Edit Success Reel";
+      document.getElementById('reel-index').value = index;
+      
+      document.getElementById('reel-title').value = item.title;
+      document.getElementById('reel-subtitle').value = item.subtitle;
+      document.getElementById('reel-video').value = item.video;
+
+      document.getElementById('reel-modal').classList.remove('hidden');
+    }
+
+    function closeReelModal() {
+      document.getElementById('reel-modal').classList.add('hidden');
+    }
+
+    document.getElementById('reel-form').addEventListener('submit', (e) => {
+      e.preventDefault();
+      
+      const index = document.getElementById('reel-index').value;
+      const title = document.getElementById('reel-title').value.trim();
+      const subtitle = document.getElementById('reel-subtitle').value.trim();
+      const video = document.getElementById('reel-video').value.trim();
+
+      const reelData = { title, subtitle, video };
+
+      const config = getStoredConfig();
+      if (!config.successReels) {
+        config.successReels = [...defaultReels];
+      }
+
+      if (index === "") {
+        config.successReels.push(reelData);
+      } else {
+        config.successReels[parseInt(index)] = reelData;
+      }
+
+      localStorage.setItem('youistic_site_config', JSON.stringify(config));
+      closeReelModal();
+      renderReelsTable();
+      showToast('Success Reel saved successfully!');
+    });
+
+    function deleteReel(index) {
+      if (!confirm('Are you sure you want to remove this Success Reel?')) return;
+      
+      const config = getStoredConfig();
+      if (config.successReels) {
+        config.successReels.splice(index, 1);
+        localStorage.setItem('youistic_site_config', JSON.stringify(config));
+        renderReelsTable();
+        showToast('Success Reel deleted.');
+      }
+    }
+
+    // Submissions handling
+    let plannersList = [];
+    let quicksList = [];
+
+    function openPlannerDetailModal(index) {
+      const item = plannersList[index];
+      if (!item) return;
+
+      document.getElementById('detail-name').textContent = item.name;
+      
+      const emailLink = document.getElementById('detail-email-link');
+      emailLink.textContent = item.email;
+      emailLink.href = `mailto:${item.email}`;
+
+      document.getElementById('detail-company').textContent = item.company || 'N/A';
+      
+      const webLink = document.getElementById('detail-website');
+      if (item.website) {
+        webLink.textContent = item.website;
+        webLink.href = item.website;
+        webLink.classList.remove('text-slate-500', 'pointer-events-none');
+      } else {
+        webLink.textContent = 'Not Provided';
+        webLink.href = '#';
+        webLink.classList.add('text-slate-500', 'pointer-events-none');
+      }
+
+      document.getElementById('detail-service').textContent = item.service;
+      document.getElementById('detail-goal').textContent = item.goal || 'Launch MVP';
+      document.getElementById('detail-budget').textContent = item.budget;
+      document.getElementById('detail-timeline').textContent = item.timeline;
+      document.getElementById('detail-date').textContent = item.date;
+
+      document.getElementById('detail-scoping-desc').textContent = item.scopingDesc || 'No scoping comments provided.';
+      document.getElementById('detail-extra-comments').textContent = item.extraComments || 'No additional comments provided.';
+
+      const badges = document.getElementById('detail-features-badges');
+      badges.innerHTML = '';
+      if (item.scopingFeatures && item.scopingFeatures.length > 0) {
+        item.scopingFeatures.forEach(feat => {
+          const span = document.createElement('span');
+          span.className = 'bg-indigo-500/10 text-indigo-300 text-xs px-2.5 py-1 rounded-lg border border-indigo-500/20';
+          span.textContent = feat;
+          badges.appendChild(span);
+        });
+      } else {
+        badges.innerHTML = `<span class="text-xs text-slate-500 italic">No features selected in scoping phase.</span>`;
+      }
+
+      document.getElementById('planner-detail-modal').classList.remove('hidden');
+    }
+
+    function closePlannerDetailModal() {
+      document.getElementById('planner-detail-modal').classList.add('hidden');
+    }
+
+    function renderPlannerTable() {
+      plannersList = JSON.parse(localStorage.getItem('youistic_planner_inquiries') || '[]');
+      
+      // Update badges
+      document.getElementById('planner-count').textContent = plannersList.length;
+      document.getElementById('stat-planner-count').textContent = plannersList.length;
+      
+      const tbody = document.getElementById('planner-table-body');
+      tbody.innerHTML = '';
+
+      if (plannersList.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" class="px-6 py-10 text-center text-slate-500">No project planner enquiries received yet.</td></tr>`;
+        return;
+      }
+
+      plannersList.forEach((item, index) => {
+        const row = document.createElement('tr');
+        row.className = 'hover:bg-white/[0.01] transition-all duration-200 cursor-pointer';
+        row.innerHTML = `
+          <td class="px-6 py-4">
+            <div class="font-bold text-white">${item.name}</div>
+            <div class="text-xs text-slate-400">${item.email}</div>
+          </td>
+          <td class="px-6 py-4 text-slate-400">
+            ${item.website ? `<a href="${item.website}" target="_blank" class="text-indigo-400 hover:underline text-xs flex items-center gap-1">${item.website}</a>` : '—'}
+          </td>
+          <td class="px-6 py-4">
+            <span class="px-3 py-1 text-xs font-semibold bg-indigo-500/10 text-indigo-300 rounded-full border border-indigo-500/20">${item.service}</span>
+          </td>
+          <td class="px-6 py-4">
+            <div class="text-white text-xs font-semibold">${item.budget}</div>
+            <div class="text-xs text-slate-500 mt-0.5">Timeline: ${item.timeline}</div>
+          </td>
+          <td class="px-6 py-4 text-slate-400 text-xs">${item.date}</td>
+          <td class="px-6 py-4 text-center space-x-2 whitespace-nowrap">
+            <button onclick="openPlannerDetailModal(${index})" class="px-3 py-1.5 bg-indigo-500/10 hover:bg-indigo-500 text-indigo-300 hover:text-white rounded-lg border border-indigo-500/20 text-xs font-semibold transition-all duration-200">
+              View Specs
+            </button>
+            <button onclick="deleteInquiry('planner', ${index})" class="px-3 py-1.5 bg-rose-500/10 hover:bg-rose-500 text-rose-400 hover:text-white rounded-lg border border-rose-500/20 text-xs font-semibold transition-all duration-200">
+              Delete
+            </button>
+          </td>
+        `;
+        
+        // Make entire row clickable to open details (excluding button clicks)
+        row.addEventListener('click', (e) => {
+          if (!e.target.closest('button') && !e.target.closest('a')) {
+            openPlannerDetailModal(index);
+          }
+        });
+
+        tbody.appendChild(row);
+      });
+    }
+
+    function renderQuickTable() {
+      quicksList = JSON.parse(localStorage.getItem('youistic_quick_inquiries') || '[]');
+      
+      // Update badges
+      document.getElementById('quick-count').textContent = quicksList.length;
+      document.getElementById('stat-quick-count').textContent = quicksList.length;
+      
+      const tbody = document.getElementById('quick-table-body');
+      tbody.innerHTML = '';
+
+      if (quicksList.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="4" class="px-6 py-10 text-center text-slate-500">No direct message submissions found.</td></tr>`;
+        return;
+      }
+
+      quicksList.forEach((item, index) => {
+        const row = document.createElement('tr');
+        row.className = 'hover:bg-white/[0.01] transition-all duration-200';
+        row.innerHTML = `
+          <td class="px-6 py-4">
+            <div class="font-bold text-white">${item.name}</div>
+            <div class="text-xs text-indigo-300 font-mono mt-0.5">${item.email}</div>
+          </td>
+          <td class="px-6 py-4 text-slate-300 leading-relaxed max-w-sm break-words">${item.message}</td>
+          <td class="px-6 py-4 text-slate-400 text-xs">${item.date}</td>
+          <td class="px-6 py-4 text-center">
+            <button onclick="deleteInquiry('quick', ${index})" class="px-3 py-1.5 bg-rose-500/10 hover:bg-rose-500 text-rose-400 hover:text-white rounded-lg border border-rose-500/20 text-xs font-semibold transition-all duration-200">
+              Delete
+            </button>
+          </td>
+        `;
+        tbody.appendChild(row);
+      });
+    }
+
+    // Delete submission
+    function deleteInquiry(type, index) {
+      if (!confirm('Are you sure you want to delete this inquiry item?')) return;
+      
+      if (type === 'planner') {
+        plannersList.splice(index, 1);
+        localStorage.setItem('youistic_planner_inquiries', JSON.stringify(plannersList));
+        renderPlannerTable();
+      } else {
+        quicksList.splice(index, 1);
+        localStorage.setItem('youistic_quick_inquiries', JSON.stringify(quicksList));
+        renderQuickTable();
+      }
+      showToast('Inquiry item removed successfully.');
+    }
+
+    // Render Referrals Table
+    function renderReferralsTable() {
+      const referralsList = JSON.parse(localStorage.getItem('youistic_referrals') || '[]');
+      const tbody = document.getElementById('referrals-table-body');
+      if (!tbody) return;
+      tbody.innerHTML = '';
+      
+      if (referralsList.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" class="px-6 py-8 text-center text-slate-500 italic">No referrals configured yet.</td></tr>`;
+        return;
+      }
+      
+      referralsList.forEach((item, index) => {
+        const useCount = item.count || 0;
+        
+        const row = document.createElement('tr');
+        row.className = 'hover:bg-white/[0.02] transition-colors';
+        row.innerHTML = `
+          <td class="px-6 py-4">
+            <span class="text-white font-bold block">${escapeHtml(item.name)}</span>
+          </td>
+          <td class="px-6 py-4">
+            <span class="text-indigo-400 font-mono bg-indigo-500/10 px-2 py-1 rounded text-xs border border-indigo-500/20">${escapeHtml(item.code)}</span>
+          </td>
+          <td class="px-6 py-4">
+            <div class="text-xs text-slate-300">Commission: <span class="text-emerald-400 font-bold">${escapeHtml(item.commission)}</span></div>
+            <div class="text-xs text-slate-300">Discount: <span class="text-indigo-300 font-bold">${escapeHtml(item.discount)}</span></div>
+          </td>
+          <td class="px-6 py-4">
+            <span class="text-white font-bold text-lg">${useCount}</span> <span class="text-xs text-slate-500">uses</span>
+          </td>
+          <td class="px-6 py-4 text-center">
+            <button onclick="deleteReferral(${index})" class="px-3 py-1.5 bg-rose-500/10 hover:bg-rose-500 text-rose-400 hover:text-white rounded-lg border border-rose-500/20 text-xs font-semibold transition-all duration-200">
+              Remove
+            </button>
+          </td>
+        `;
+        tbody.appendChild(row);
+      });
+    }
+
+    // Add Referral Modal Logic
+    function openAddReferralModal() {
+      document.getElementById('referral-form').reset();
+      document.getElementById('referral-modal').classList.remove('hidden');
+    }
+
+    function closeReferralModal() {
+      document.getElementById('referral-modal').classList.add('hidden');
+    }
+
+    const referralForm = document.getElementById('referral-form');
+    if (referralForm) {
+      referralForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const name = document.getElementById('referral-name').value.trim();
+        const code = document.getElementById('referral-code').value.trim();
+        const commission = document.getElementById('referral-commission').value.trim();
+        const discount = document.getElementById('referral-discount').value.trim();
+        
+        const list = JSON.parse(localStorage.getItem('youistic_referrals') || '[]');
+        
+        // Prevent duplicate codes
+        if (list.find(r => r.code.toLowerCase() === code.toLowerCase())) {
+           showToast('Error: Referral code must be unique!');
+           return;
+        }
+
+        list.push({ name, code, commission, discount, count: 0 });
+        localStorage.setItem('youistic_referrals', JSON.stringify(list));
+        
+        renderReferralsTable();
+        
+        // Update count badge
+        const referralsCount = document.getElementById('referrals-count');
+        if (referralsCount) referralsCount.textContent = list.length;
+        
+        closeReferralModal();
+        showToast('Referral partner added successfully!');
+      });
+    }
+
+    function deleteReferral(index) {
+      if (!confirm('Are you sure you want to remove this referral partner?')) return;
+      
+      const list = JSON.parse(localStorage.getItem('youistic_referrals') || '[]');
+      list.splice(index, 1);
+      localStorage.setItem('youistic_referrals', JSON.stringify(list));
+      
+      renderReferralsTable();
+      
+      const referralsCount = document.getElementById('referrals-count');
+      if (referralsCount) referralsCount.textContent = list.length;
+      
+      showToast('Referral removed.');
+    }
+
+    function filterReferralTable() {
+      const q = document.getElementById('referral-search').value.toLowerCase();
+      const rows = document.querySelectorAll('#referrals-table-body tr');
+      rows.forEach(row => {
+        const text = row.textContent.toLowerCase();
+        if (text.includes(q)) {
+          row.classList.remove('hidden');
+        } else {
+          row.classList.add('hidden');
+        }
+      });
+    }
+
+    // Search filters
+    function filterPlannerTable() {
+      const q = document.getElementById('planner-search').value.toLowerCase();
+      const rows = document.querySelectorAll('#planner-table-body tr');
+      rows.forEach(row => {
+        const text = row.textContent.toLowerCase();
+        if (text.includes(q)) {
+          row.classList.remove('hidden');
+        } else {
+          row.classList.add('hidden');
+        }
+      });
+    }
+
+    function filterQuickTable() {
+      const q = document.getElementById('quick-search').value.toLowerCase();
+      const rows = document.querySelectorAll('#quick-table-body tr');
+      rows.forEach(row => {
+        const text = row.textContent.toLowerCase();
+        if (text.includes(q)) {
+          row.classList.remove('hidden');
+        } else {
+          row.classList.add('hidden');
+        }
+      });
+    }
+
+    // Export CSV functionality
+    function exportInquiries(type) {
+      let data = [];
+      let filename = '';
+      
+      if (type === 'planner') {
+        data = JSON.parse(localStorage.getItem('youistic_planner_inquiries') || '[]');
+        filename = 'planner_inquiries.csv';
+      } else {
+        data = JSON.parse(localStorage.getItem('youistic_quick_inquiries') || '[]');
+        filename = 'quick_messages.csv';
+      }
+
+      if (data.length === 0) {
+        alert('There is no data to export!');
+        return;
+      }
+
+      // Explicitly order headers to make sure custom multi-step fields are exported clearly
+      const headers = type === 'planner' 
+        ? ['name', 'email', 'company', 'website', 'service', 'goal', 'budget', 'timeline', 'scopingFeatures', 'scopingDesc', 'extraComments', 'date']
+        : ['name', 'email', 'message', 'date'];
+      
+      let csvContent = "data:text/csv;charset=utf-8," 
+        + headers.map(h => `"${h.toUpperCase()}"`).join(",") + "\n"
+        + data.map(item => headers.map(h => {
+            let val = item[h] || '';
+            if (Array.isArray(val)) {
+              val = val.join("; ");
+            }
+            return `"${String(val).replace(/"/g, '""')}"`;
+          }).join(",")).join("\n");
+      
+      const encodedUri = encodeURI(csvContent);
+      const link = document.createElement("a");
+      link.setAttribute("href", encodedUri);
+      link.setAttribute("download", filename);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+
+    // Reset Config
+    function resetWholeConfig() {
+      if (confirm('Are you absolutely sure you want to delete all customization settings? This will restore the website back to its default hardcoded content.')) {
+        localStorage.removeItem('youistic_site_config');
+        showToast('All custom layouts reset to system default!');
+        setTimeout(() => {
+          window.location.reload();
+        }, 1500);
+      }
+    }
+
+    // Backup export
+    function exportAllData() {
+      const exportObj = {
+        config: getStoredConfig(),
+        planners: JSON.parse(localStorage.getItem('youistic_planner_inquiries') || '[]'),
+        quicks: JSON.parse(localStorage.getItem('youistic_quick_inquiries') || '[]')
+      };
+      
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(exportObj, null, 2));
+      const downloadAnchor = document.createElement('a');
+      downloadAnchor.setAttribute("href", dataStr);
+      downloadAnchor.setAttribute("download", "youistic_backup_config.json");
+      document.body.appendChild(downloadAnchor);
+      downloadAnchor.click();
+      downloadAnchor.remove();
+    }
+  </script>
+</body>
+
+</html>
