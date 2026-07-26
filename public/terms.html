@@ -10,20 +10,24 @@
   <link rel="icon" type="image/png" href="/media/favicon.png" />
   <!-- Tailwind -->
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- GSAP -->
+  <!-- GSAP + ScrollTrigger -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+  <!-- Lenis -->
+  <script src="https://cdn.jsdelivr.net/npm/@studio-freight/lenis@1.0.42/dist/lenis.min.js"></script>
+  <script>gsap.registerPlugin(ScrollTrigger);</script>
   <script type="module" crossorigin src="/assets/main-DsnuVSX_.js"></script>
   <link rel="stylesheet" crossorigin href="/assets/styles-D1IfpjVg.css">
 </head>
 
-<body class="bg-[#030712] text-white overflow-x-hidden relative">
-
-  <!-- CYBER GRID BACKGROUND -->
-  <div id="cyber-grid" class="grid-bg"></div>
+<body class="bg-[#030712] text-white grid-bg position-relative">
 
   <!-- CURSOR -->
   <div id="cursor-dot"></div>
   <div id="cursor-ring"></div>
+
+  <!-- CANVAS TRAIL -->
+  <canvas id="trail-canvas"></canvas>
 
   <!-- NAV -->
   <nav>
