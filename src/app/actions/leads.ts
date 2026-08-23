@@ -6,11 +6,6 @@ import { prisma } from "@/lib/prisma";
 
 export async function getLeads() {
   try {
-    // Migrate any legacy 'NEW' status leads to 'PENDING'
-    await prisma.$executeRawUnsafe(
-      `UPDATE "leads" SET "status" = 'PENDING'::"LeadStatus" WHERE "status" = 'NEW'::"LeadStatus"`
-    ).catch(() => {});
-
     const leads = await prisma.$queryRawUnsafe<any[]>(
       `SELECT * FROM "leads" ORDER BY "createdAt" DESC`
     );

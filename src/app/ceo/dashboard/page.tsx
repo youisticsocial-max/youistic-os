@@ -543,8 +543,8 @@ export default function CEODashboardPage() {
                       formatter={(value: any) => [`₹${Number(value).toLocaleString()}`, '']}
                       contentStyle={{ background: "var(--bg-card)", border: "1px solid var(--bg-border)", borderRadius: "8px", color: "var(--text-primary)", fontSize: "12px", boxShadow: "var(--shadow-card)" }}
                     />
-                    <Area type="monotone" dataKey="FBP" stroke="#6c5ce7" strokeWidth={2} fill="url(#fbpGrad)" />
-                    <Area type="monotone" dataKey="Tech" stroke="#00cec9" strokeWidth={2} fill="url(#techGrad)" />
+                    <Area type="monotone" dataKey="FBP" stroke="#6c5ce7" strokeWidth={2} fill="url(#fbpGrad)" isAnimationActive={false} />
+                    <Area type="monotone" dataKey="Tech" stroke="#00cec9" strokeWidth={2} fill="url(#techGrad)" isAnimationActive={false} />
                   </AreaChart>
                 </ResponsiveContainer>
               </ClientOnly>
@@ -559,13 +559,13 @@ export default function CEODashboardPage() {
                 <ResponsiveContainer width="100%" height={180}>
                   <PieChart>
                     {serviceChartData.reduce((sum: number, item: any) => sum + item.value, 0) > 0 ? (
-                      <Pie data={serviceChartData} cx="50%" cy="50%" innerRadius={50} outerRadius={75} dataKey="value" paddingAngle={4}>
+                      <Pie data={serviceChartData} cx="50%" cy="50%" innerRadius={50} outerRadius={75} dataKey="value" paddingAngle={4} isAnimationActive={false}>
                         {serviceChartData.map((entry: any, index: number) => (
                           <Cell key={`cell-${index}`} fill={entry.color} />
                         ))}
                       </Pie>
                     ) : (
-                      <Pie data={[{ name: "No Active Revenue", value: 1, color: "rgba(148, 163, 184, 0.2)" }]} cx="50%" cy="50%" innerRadius={50} outerRadius={75} dataKey="value">
+                      <Pie data={[{ name: "No Active Revenue", value: 1, color: "rgba(148, 163, 184, 0.2)" }]} cx="50%" cy="50%" innerRadius={50} outerRadius={75} dataKey="value" isAnimationActive={false}>
                         <Cell fill="rgba(148, 163, 184, 0.2)" />
                       </Pie>
                     )}
@@ -601,8 +601,8 @@ export default function CEODashboardPage() {
                     <XAxis dataKey="name" tick={{ fill: "var(--text-secondary)", fontSize: 11 }} axisLine={false} tickLine={false} />
                     <YAxis tick={{ fill: "var(--text-muted)", fontSize: 11 }} axisLine={false} tickLine={false} />
                     <Tooltip contentStyle={{ background: "var(--bg-card)", border: "1px solid var(--bg-border)", borderRadius: "8px", color: "var(--text-primary)", fontSize: "12px", boxShadow: "var(--shadow-card)" }} />
-                    <Bar dataKey="closed" fill="#6c5ce7" radius={[4, 4, 0, 0]} />
-                    <Bar dataKey="leads" fill="#00cec9" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="closed" fill="#6c5ce7" radius={[4, 4, 0, 0]} isAnimationActive={false} />
+                    <Bar dataKey="leads" fill="#00cec9" radius={[4, 4, 0, 0]} isAnimationActive={false} />
                   </BarChart>
                 </ResponsiveContainer>
               </ClientOnly>
@@ -618,7 +618,7 @@ export default function CEODashboardPage() {
                     <XAxis dataKey="month" tick={{ fill: "var(--text-secondary)", fontSize: 11 }} axisLine={false} tickLine={false} />
                     <YAxis tick={{ fill: "var(--text-muted)", fontSize: 11 }} axisLine={false} tickLine={false} />
                     <Tooltip contentStyle={{ background: "var(--bg-card)", border: "1px solid var(--bg-border)", borderRadius: "8px", color: "var(--text-primary)", fontSize: "12px", boxShadow: "var(--shadow-card)" }} />
-                    <Area type="monotone" dataKey="clients" stroke="#00b894" strokeWidth={2} fill="rgba(0,184,148,0.15)" />
+                    <Area type="monotone" dataKey="clients" stroke="#00b894" strokeWidth={2} fill="rgba(0,184,148,0.15)" isAnimationActive={false} />
                   </AreaChart>
                 </ResponsiveContainer>
               </ClientOnly>
@@ -632,13 +632,13 @@ export default function CEODashboardPage() {
                 <ResponsiveContainer width="100%" height={160}>
                   <PieChart>
                     {clientStatusChartData.reduce((sum: number, item: any) => sum + item.value, 0) > 0 ? (
-                      <Pie data={clientStatusChartData} cx="50%" cy="50%" innerRadius={45} outerRadius={65} dataKey="value" paddingAngle={3}>
+                      <Pie data={clientStatusChartData} cx="50%" cy="50%" innerRadius={45} outerRadius={65} dataKey="value" paddingAngle={3} isAnimationActive={false}>
                         {clientStatusChartData.map((entry: any, index: number) => (
                           <Cell key={`cell-status-${index}`} fill={entry.color} />
                         ))}
                       </Pie>
                     ) : (
-                      <Pie data={[{ name: "No Active Clients", value: 1, color: "rgba(148, 163, 184, 0.2)" }]} cx="50%" cy="50%" innerRadius={45} outerRadius={65} dataKey="value">
+                      <Pie data={[{ name: "No Active Clients", value: 1, color: "rgba(148, 163, 184, 0.2)" }]} cx="50%" cy="50%" innerRadius={45} outerRadius={65} dataKey="value" isAnimationActive={false}>
                         <Cell fill="rgba(148, 163, 184, 0.2)" />
                       </Pie>
                     )}

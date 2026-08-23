@@ -23,21 +23,8 @@ export async function getTeamMembers() {
       // Ignore foreign key deletion errors if leads are attached
     }
 
-    // Ensure all 4 allowed team members exist in DB
-    for (const member of defaultTeam) {
-      try {
-        const exists = await prisma.user.findFirst({
-          where: { OR: [{ email: member.email }, { name: member.name }] },
-        });
-        if (!exists) {
-          await prisma.user.create({ data: member });
-        }
-      } catch (err) {
-        console.error("Error upserting team member:", err);
-      }
-    }
-
-    const users = await prisma.user.findMany({
+    // Fetch active users in a single bulk query
+    let users = await prisma.user.findMany({
       where: {
         isActive: true,
         name: { notIn: ["Sneha Reddy", "Priya Kapoor", "Rohan Sharma", "BDE Lead"] },
@@ -48,6 +35,31 @@ export async function getTeamMembers() {
       },
       orderBy: { createdAt: "asc" },
     });
+
+    // Ensure all allowed default team members exist if DB is missing any
+    if (users.length < defaultTeam.length) {
+      for (const member of defaultTeam) {
+        const exists = users.some(u => u.email === member.email || u.name === member.name);
+        if (!exists) {
+          try {
+            await prisma.user.create({ data: member });
+          } catch (err) {
+            console.error("Error creating team member:", err);
+          }
+        }
+      }
+      users = await prisma.user.findMany({
+        where: {
+          isActive: true,
+          name: { notIn: ["Sneha Reddy", "Priya Kapoor", "Rohan Sharma", "BDE Lead"] },
+        },
+        include: {
+          assignedLeads: true,
+          meetings: true,
+        },
+        orderBy: { createdAt: "asc" },
+      });
+    }
 
     if (users.length === 0) {
       return fallbackTeamMembers();
