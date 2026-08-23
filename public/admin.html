@@ -1623,31 +1623,38 @@
       });
     }
 
-    // Search filters
+    // Search filters (debounced for performance)
+    let searchPlannerTimeout, searchQuickTimeout;
     function filterPlannerTable() {
-      const q = document.getElementById('planner-search').value.toLowerCase();
-      const rows = document.querySelectorAll('#planner-table-body tr');
-      rows.forEach(row => {
-        const text = row.textContent.toLowerCase();
-        if (text.includes(q)) {
-          row.classList.remove('hidden');
-        } else {
-          row.classList.add('hidden');
-        }
-      });
+      clearTimeout(searchPlannerTimeout);
+      searchPlannerTimeout = setTimeout(() => {
+        const q = document.getElementById('planner-search').value.toLowerCase();
+        const rows = document.querySelectorAll('#planner-table-body tr');
+        rows.forEach(row => {
+          const text = row.textContent.toLowerCase();
+          if (text.includes(q)) {
+            row.classList.remove('hidden');
+          } else {
+            row.classList.add('hidden');
+          }
+        });
+      }, 150);
     }
 
     function filterQuickTable() {
-      const q = document.getElementById('quick-search').value.toLowerCase();
-      const rows = document.querySelectorAll('#quick-table-body tr');
-      rows.forEach(row => {
-        const text = row.textContent.toLowerCase();
-        if (text.includes(q)) {
-          row.classList.remove('hidden');
-        } else {
-          row.classList.add('hidden');
-        }
-      });
+      clearTimeout(searchQuickTimeout);
+      searchQuickTimeout = setTimeout(() => {
+        const q = document.getElementById('quick-search').value.toLowerCase();
+        const rows = document.querySelectorAll('#quick-table-body tr');
+        rows.forEach(row => {
+          const text = row.textContent.toLowerCase();
+          if (text.includes(q)) {
+            row.classList.remove('hidden');
+          } else {
+            row.classList.add('hidden');
+          }
+        });
+      }, 150);
     }
 
     // Export CSV functionality

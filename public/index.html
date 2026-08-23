@@ -7,7 +7,7 @@
   <title>Youistic – We Turn Clicks Into Cash | Digital Marketing Agency</title>
   <meta name="description"
     content="Youistic is a high-performance digital marketing agency specializing in SEO, Paid Ads, Social Growth, and CRO. We turn clicks into cash." />
-  <link rel="icon" type="image/png" href="/media/favicon.png" />
+  <link rel="icon" type="image/png" href="/media/favicon.png" />
   <!-- Tailwind -->
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- GSAP + ScrollTrigger -->
@@ -51,7 +51,7 @@
       <li><a href="solutions.html">Automations</a></li>
       <li><a href="contact.html">Contact</a></li>
     </ul>
-    <a href="start.html" class="btn-primary magnetic" id="nav-cta">Start</a>
+    <a href="start.html" class="btn-primary magnetic" id="nav-cta">Start Project →</a>
     <!-- Hamburger -->
     <button class="nav-hamburger" id="nav-hamburger" aria-label="Toggle menu">
       <span></span><span></span><span></span>
@@ -63,56 +63,97 @@
     <a href="#success-reels">Success Reels</a>
     <a href="solutions.html">Automations</a>
     <a href="contact.html">Contact</a>
-    <a href="start.html" class="btn-primary">Start →</a>
+    <a href="start.html" class="btn-primary">Start Project →</a>
   </div>
 
   <!-- ╔══ HERO ══╗ -->
-  <section id="hero" class="min-h-vh flex flex-col justify-center items-center">
+  <section id="hero" class="min-h-screen relative flex flex-col justify-between items-center pt-28 pb-12 px-4 overflow-hidden">
+    <!-- DECORATIVE CSS ARCS (Non-canvas, Lightweight) -->
+    <div class="hero-arc hero-arc-top-left"></div>
+    <div class="hero-arc hero-arc-bottom-right"></div>
     <div class="hero-bg-glow"></div>
     <div class="orb orb-1"></div>
     <div class="orb orb-2"></div>
-    <div class="relative z-10 max-w-6xl mx-auto px-4">
-      <!-- Badge -->
-      <div
-        class="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-indigo-500/30 bg-indigo-500/10 text-indigo-300 text-sm font-medium mb-8 opacity-0"
-        id="hero-badge">
-        <span class="w-2 h-2 rounded-full bg-indigo-400 animate-pulse"></span>
-        ⚡ Premium Web Development & Digital Solutions Studio
+
+    <div class="relative z-10 max-w-5xl mx-auto text-center flex flex-col items-center my-auto w-full">
+      <!-- Growth Partner Badge -->
+      <div class="inline-flex items-center gap-2.5 px-4 py-2 rounded-full border border-indigo-500/30 bg-indigo-950/40 backdrop-blur-md text-indigo-300 text-xs md:text-sm font-medium mb-8 shadow-lg shadow-indigo-500/10" id="hero-badge">
+        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+        <span>🚀 Growth Partner for Ambitious Businesses</span>
       </div>
-      <h1 class="font-syne text-5xl md:text-7xl lg:text-8xl font-extrabold mb-6 leading-none tracking-tight">
+
+      <!-- Main Headline -->
+      <h1 class="font-syne text-4xl sm:text-6xl md:text-7xl lg:text-8xl font-extrabold mb-6 leading-none tracking-tight">
         <span class="block clip-text hero-title-line" id="hero-line-1">We Code</span>
-        <span class="block text-white hero-title-line mt-2" id="hero-line-2">Your Growth.</span>
+        <span class="block text-white hero-title-line mt-2 relative inline-block" id="hero-line-2">
+          Your Growth.
+          <span class="hero-growth-underline"></span>
+        </span>
       </h1>
-      <p class="hero-sub text-lg md:text-xl text-slate-400 max-w-2xl mx-auto mb-10 leading-relaxed">
-        Stop fighting with slow, generic templates. We engineer custom, ultra-fast websites and digital solutions that
-        convert visitors into customers.
+
+      <!-- Value Proposition Subtitle -->
+      <p class="hero-sub text-base sm:text-lg md:text-xl text-slate-400 max-w-2xl mx-auto mb-8 leading-relaxed">
+        Stop fighting with slow, generic templates. We engineer custom, ultra-fast websites and digital solutions that convert visitors into customers.
       </p>
-      <div class="flex flex-wrap justify-center gap-4 mb-16">
-        <a href="start.html" class="btn-primary magnetic text-base px-8 py-4" id="hero-cta-1">Start</a>
-        <a href="#success-reels" class="btn-secondary magnetic text-base px-8 py-4" id="hero-cta-2">Watch Success
-          Stories ↓</a>
+
+      <!-- Four Service Pills -->
+      <div class="hero-service-pills flex flex-wrap justify-center gap-3 mb-10" id="hero-pills">
+        <div class="service-pill">
+          <span class="pill-icon text-indigo-400">🌐</span>
+          <span>Websites</span>
+        </div>
+        <div class="service-pill">
+          <span class="pill-icon text-indigo-400">⚙</span>
+          <span>Custom ERP & SaaS</span>
+        </div>
+        <div class="service-pill">
+          <span class="pill-icon text-indigo-400">📈</span>
+          <span>Digital Marketing</span>
+        </div>
+        <div class="service-pill">
+          <span class="pill-icon text-indigo-400">⚡</span>
+          <span>Automations</span>
+        </div>
       </div>
-      <!-- Stats -->
-      <div class="stats-grid hero-stats">
-        <div class="stat-item">
-          <div class="stat-counter" id="c1">0%</div>
-          <div class="stat-label">Uptime Guaranteed</div>
-        </div>
-        <div class="stat-item">
-          <div class="stat-counter" id="c2">0</div>
-          <div class="stat-label">Hours Saved Via Automation</div>
-        </div>
-        <div class="stat-item">
-          <div class="stat-counter" id="c3">0M+</div>
-          <div class="stat-label">App Users Reached</div>
+
+      <!-- CTA Action Row -->
+      <div class="flex flex-wrap justify-center items-center gap-4 mb-12" id="hero-ctas">
+        <a href="start.html" class="btn-primary magnetic text-sm sm:text-base px-8 py-4 shadow-xl shadow-indigo-600/30" id="hero-cta-1">
+          Start Your Project →
+        </a>
+        <a href="#success-reels" class="btn-secondary magnetic text-sm sm:text-base px-8 py-4 flex items-center gap-2" id="hero-cta-2">
+          <span class="w-6 h-6 rounded-full bg-indigo-500/20 border border-indigo-500/40 flex items-center justify-center text-xs">▶</span>
+          <span>Watch Success Stories</span>
+        </a>
+      </div>
+
+      <!-- Metrics / Trust Card -->
+      <div class="hero-stats-card w-full max-w-4xl" id="hero-stats-card">
+        <div class="stats-grid-card">
+          <div class="stat-card-item">
+            <div class="stat-card-counter" id="c1">99.9%</div>
+            <div class="stat-card-label">Uptime Guaranteed</div>
+          </div>
+          <div class="stat-card-divider"></div>
+          <div class="stat-card-item">
+            <div class="stat-card-counter" id="c2">5,000+</div>
+            <div class="stat-card-label">Hours Saved Via Automation</div>
+          </div>
+          <div class="stat-card-divider"></div>
+          <div class="stat-card-item">
+            <div class="stat-card-counter" id="c3">25M+</div>
+            <div class="stat-card-label">App Users Reached</div>
+          </div>
         </div>
       </div>
     </div>
-    <!-- Scroll indicator -->
-    <div
-      class="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 text-slate-500 text-xs tracking-widest uppercase">
-      <span>Scroll</span>
-      <div class="w-px h-12 bg-gradient-to-b from-indigo-500 to-transparent animate-pulse"></div>
+
+    <!-- Scroll Indicator -->
+    <div class="relative z-10 flex flex-col items-center gap-2 text-slate-500 text-[11px] tracking-widest uppercase mt-6" id="hero-scroll-indicator">
+      <span>Scroll to Explore</span>
+      <div class="w-4 h-7 border border-slate-700 rounded-full flex justify-center p-1">
+        <div class="w-1 h-1.5 bg-indigo-400 rounded-full animate-bounce"></div>
+      </div>
     </div>
   </section>
 
@@ -138,8 +179,8 @@
         <div class="reel-card magnetic snap-center flex-shrink-0" data-tilt>
           <!-- Muted background video preview -->
           <video
-            class="absolute inset-0 w-full h-full object-cover opacity-60 transition-opacity duration-500 rounded-3xl"
-            loop muted autoplay playsinline>
+            class="lazy-reel-video absolute inset-0 w-full h-full object-cover opacity-60 transition-opacity duration-500 rounded-3xl"
+            loop muted playsinline preload="none">
             <source src="/media/reels_1_optimized.mp4" type="video/mp4">
           </video>
           <!-- Hover Glow Overlay -->
@@ -160,8 +201,8 @@
         <!-- Reel Card 2 -->
         <div class="reel-card magnetic snap-center flex-shrink-0" data-tilt>
           <video
-            class="absolute inset-0 w-full h-full object-cover opacity-60 transition-opacity duration-500 rounded-3xl"
-            loop muted autoplay playsinline>
+            class="lazy-reel-video absolute inset-0 w-full h-full object-cover opacity-60 transition-opacity duration-500 rounded-3xl"
+            loop muted playsinline preload="none">
             <source src="/media/reels_2_optimized.mp4" type="video/mp4">
           </video>
           <div class="reel-glow"></div>
@@ -179,8 +220,8 @@
         <!-- Reel Card 3 -->
         <div class="reel-card magnetic snap-center flex-shrink-0" data-tilt>
           <video
-            class="absolute inset-0 w-full h-full object-cover opacity-60 transition-opacity duration-500 rounded-3xl"
-            loop muted autoplay playsinline>
+            class="lazy-reel-video absolute inset-0 w-full h-full object-cover opacity-60 transition-opacity duration-500 rounded-3xl"
+            loop muted playsinline preload="none">
             <source src="/media/reels_4_optimized.mp4" type="video/mp4">
           </video>
           <div class="reel-glow"></div>
@@ -198,8 +239,8 @@
         <!-- Reel Card 4 -->
         <div class="reel-card magnetic snap-center flex-shrink-0" data-tilt>
           <video
-            class="absolute inset-0 w-full h-full object-cover opacity-60 transition-opacity duration-500 rounded-3xl"
-            loop muted autoplay playsinline>
+            class="lazy-reel-video absolute inset-0 w-full h-full object-cover opacity-60 transition-opacity duration-500 rounded-3xl"
+            loop muted playsinline preload="none">
             <source src="/media/reels_5_optimized.mp4" type="video/mp4">
           </video>
           <div class="reel-glow"></div>
@@ -424,8 +465,7 @@
             Build</span></h2>
       </div>
       <div class="section-header mt-1">
-        <h2 class="font-syne text-5xl md:text-6xl font-extrabold clip-text"><span class="section-header-inner">Something
-            Great.</span></h2>
+        <h2 class="font-syne text-5xl md:text-6xl font-extrabold clip-text"><span class="section-header-inner">Something Great.</span></h2>
       </div>
       <p class="text-slate-400 mt-6 mb-12 text-lg">Tell us about your digital goals, and our team will design a custom
         high-performance solution for your brand.</p>
@@ -533,8 +573,8 @@
       <div class="border-t border-indigo-500/10 pt-6 flex flex-col md:flex-row justify-between items-center gap-4">
         <p class="text-slate-600 text-xs">&copy; 2026 Youistic Studio. All rights reserved. | <a href="admin.html" class="hover:text-indigo-400 transition-colors" style="text-decoration: none; opacity: 0.8;">Admin Portal</a> Crafted with &#10084; in India.</p>
         <div class="flex gap-6">
-          <a href="privacy.html" class="text-slate-600 hover:text-indigo-400 transition-colors text-xs">Privacy Policy</a>
-          <a href="terms.html" class="text-slate-600 hover:text-indigo-400 transition-colors text-xs">Terms & Conditions</a>
+          <a href="#" class="text-slate-600 hover:text-indigo-400 transition-colors text-xs">Privacy Policy</a>
+          <a href="#" class="text-slate-600 hover:text-indigo-400 transition-colors text-xs">Terms of Service</a>
           <a href="#" class="text-slate-600 hover:text-indigo-400 transition-colors text-xs">Sitemap</a>
         </div>
       </div>
