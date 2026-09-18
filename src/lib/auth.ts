@@ -15,11 +15,13 @@ const SESSION_COOKIE_NAME = "youistic_session";
 const SESSION_MAX_AGE_SECONDS = 7 * 24 * 60 * 60; // 7 Days
 
 function getSecretKey(): string {
-  return (
-    process.env.SESSION_SECRET ||
-    process.env.NEXTAUTH_SECRET ||
-    "youistic_secure_production_secret_key_2026_default_fallback"
-  );
+  const secret = process.env.SESSION_SECRET || process.env.NEXTAUTH_SECRET;
+  if (!secret || secret.trim().length < 32) {
+    throw new Error(
+      "SECURITY ERROR: SESSION_SECRET (or NEXTAUTH_SECRET) environment variable is missing or too short (minimum 32 characters required)."
+    );
+  }
+  return secret.trim();
 }
 
 /**

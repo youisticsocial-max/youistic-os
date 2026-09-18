@@ -27,7 +27,7 @@ export async function verifyAndLogin(
     authenticatedName = "CEO";
     targetEmail = "ceo@youistic.com";
   } else if (role === "SDR") {
-    if (employeeName === "Kajal Sharma" || trimmed === "Ks123456") {
+    if (employeeName === "Kajal Sharma") {
       authenticatedName = "Kajal Sharma";
       targetEmail = "kajal@youistic.com";
     } else {
@@ -39,8 +39,8 @@ export async function verifyAndLogin(
     targetEmail = "kiyam@youistic.com";
   }
 
-  // Find or provision user record in PostgreSQL database
-  let user = await prisma.user.findFirst({
+  // Find user record in PostgreSQL database
+  const user = await prisma.user.findFirst({
     where: {
       OR: [
         { email: targetEmail },
@@ -51,42 +51,20 @@ export async function verifyAndLogin(
   });
 
   if (!user) {
-    user = await prisma.user.create({
-      data: {
-        name: authenticatedName,
-        email: targetEmail || `${authenticatedName.toLowerCase().replace(/\s+/g, "")}@youistic.com`,
-        role: targetRoleEnum,
-        department: `${role} Department`,
-      },
-    });
+    return { success: false, error: "Invalid credentials. Please check your credentials and try again." };
   }
 
-  // Seed passwords fallback for initial database bootstrap
-  const initialSeedPasswords: Record<string, string[]> = {
-    CEO: ["@nehran#0225!Ok"],
-    SDR: ["Sshh123456", "Ks123456", "SDR123456"],
-    BDE: ["Kym123456", "BDE123456"],
-  };
-
-  let isPasswordValid = false;
-
-  if (user.passwordHash) {
-    isPasswordValid = bcrypt.compareSync(trimmed, user.passwordHash);
-  } else {
-    // If user passwordHash is uninitialized, check against seed passwords and hash+store on first login
-    const allowedSeedPasswords = initialSeedPasswords[role] || [];
-    if (allowedSeedPasswords.includes(trimmed)) {
-      isPasswordValid = true;
-      const newHash = bcrypt.hashSync(trimmed, 10);
-      await prisma.user.update({
-        where: { id: user.id },
-        data: { passwordHash: newHash },
-      });
-    }
+  if (!user.passwordHash) {
+    return {
+      success: false,
+      error: "Account initialization required. Please contact system administrator to set up your password.",
+    };
   }
+
+  const isPasswordValid = bcrypt.compareSync(trimmed, user.passwordHash);
 
   if (!isPasswordValid) {
-    return { success: false, error: "Invalid password. Please try again." };
+    return { success: false, error: "Invalid credentials. Please check your password and try again." };
   }
 
   // Issue secure httpOnly, signed session cookie
