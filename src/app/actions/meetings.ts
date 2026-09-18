@@ -3,8 +3,10 @@
 import { MeetingStatus, UserRole } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
+import { requireRole } from "@/lib/auth";
 
 export async function getMeetings() {
+  await requireRole(["ADMIN", "BDE", "SDR"]);
   try {
     const meetings = await prisma.meeting.findMany({
       orderBy: { meetingDate: "asc" },
@@ -20,11 +22,14 @@ export async function getMeetings() {
 }
 
 export async function deleteAllMeetings() {
+  await requireRole(["ADMIN"]);
   try {
     await prisma.meeting.deleteMany({});
-    revalidatePath("/dashboard/bde");
-    revalidatePath("/dashboard/sdr");
-    revalidatePath("/ceo/dashboard");
+    try {
+      revalidatePath("/dashboard/bde");
+      revalidatePath("/dashboard/sdr");
+      revalidatePath("/ceo/dashboard");
+    } catch {}
     return { success: true };
   } catch (error) {
     console.error("Failed to delete all meetings:", error);
@@ -40,6 +45,7 @@ export async function createMeeting(data: {
   assignedRole?: "CEO" | "BDE" | "SDR";
   hostId?: string;
 }) {
+  await requireRole(["ADMIN", "BDE", "SDR"]);
   try {
     let hostId = data.hostId;
 
@@ -74,10 +80,12 @@ export async function createMeeting(data: {
         leadId: data.leadId,
       },
     });
-    revalidatePath("/dashboard/bde");
-    revalidatePath("/dashboard/sdr");
-    revalidatePath("/dashboard");
-    revalidatePath("/ceo/dashboard");
+    try {
+      revalidatePath("/dashboard/bde");
+      revalidatePath("/dashboard/sdr");
+      revalidatePath("/dashboard");
+      revalidatePath("/ceo/dashboard");
+    } catch {}
     return meeting;
   } catch (error) {
     console.error("Failed to create meeting:", error);
@@ -86,12 +94,13 @@ export async function createMeeting(data: {
 }
 
 export async function updateMeetingStatus(id: string, status: MeetingStatus) {
+  await requireRole(["ADMIN", "BDE", "SDR"]);
   try {
     const meeting = await prisma.meeting.update({
       where: { id },
       data: { status },
     });
-    revalidatePath("/dashboard/bde");
+    try { revalidatePath("/dashboard/bde"); } catch {}
     return meeting;
   } catch (error) {
     console.error("Failed to update meeting status:", error);
@@ -104,6 +113,7 @@ export async function updateMeetingDetails(id: string, data: {
   meetingDate?: Date;
   notes?: string;
 }) {
+  await requireRole(["ADMIN", "BDE", "SDR"]);
   try {
     const meeting = await prisma.meeting.update({
       where: { id },
@@ -113,8 +123,10 @@ export async function updateMeetingDetails(id: string, data: {
         ...(data.notes !== undefined ? { notes: data.notes } : {}),
       },
     });
-    revalidatePath("/dashboard/bde");
-    revalidatePath("/dashboard/sdr");
+    try {
+      revalidatePath("/dashboard/bde");
+      revalidatePath("/dashboard/sdr");
+    } catch {}
     return meeting;
   } catch (error) {
     console.error("Failed to update meeting details:", error);
@@ -123,12 +135,15 @@ export async function updateMeetingDetails(id: string, data: {
 }
 
 export async function deleteMeeting(id: string) {
+  await requireRole(["ADMIN", "BDE"]);
   try {
     await prisma.meeting.delete({
       where: { id }
     });
-    revalidatePath("/dashboard/bde");
-    revalidatePath("/dashboard/sdr");
+    try {
+      revalidatePath("/dashboard/bde");
+      revalidatePath("/dashboard/sdr");
+    } catch {}
   } catch (error) {
     console.error("Failed to delete meeting:", error);
     throw new Error("Failed to delete meeting");

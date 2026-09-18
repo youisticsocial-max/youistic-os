@@ -2,6 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { UserRole } from "@prisma/client";
+import { requireRole } from "@/lib/auth";
 
 const defaultTeam = [
   { name: "CEO", email: "ceo@youistic.com", role: UserRole.ADMIN, department: "CEO & Executive Lead", phone: "+91 98765 10000" },
@@ -11,6 +12,7 @@ const defaultTeam = [
 ];
 
 export async function getTeamMembers() {
+  await requireRole(["ADMIN", "BDE", "SDR"]);
   try {
     // Safely attempt to clean up legacy mock user names without breaking on FK constraints
     try {
@@ -182,6 +184,7 @@ function fallbackTeamMembers() {
 }
 
 export async function createTeamMember(data: { name: string; email: string; role: UserRole; department?: string; phone?: string }) {
+  await requireRole(["ADMIN"]);
   try {
     const newUser = await prisma.user.create({
       data: {

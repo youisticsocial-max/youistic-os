@@ -1,56 +1,31 @@
 "use server";
 
+import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
-import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
+import { getAuthenticatedSession, requireAuth } from "@/lib/auth";
 
 export async function getProfile() {
   try {
-    let cookieStore;
-    try {
-      cookieStore = await cookies();
-    } catch {
-      // Fallback
-    }
-    const userRole = cookieStore?.get("user_role")?.value || "CEO";
-    const loggedInName = cookieStore?.get("user_name")?.value || "CEO";
-
-    let user = null;
-    if (loggedInName && loggedInName !== "CEO") {
-      user = await prisma.user.findFirst({
-        where: {
-          name: { contains: loggedInName, mode: "insensitive" }
-        }
-      });
+    const session = await getAuthenticatedSession();
+    if (!session) {
+      return { success: false, error: "Not authenticated" };
     }
 
-    if (!user && userRole) {
-      user = await prisma.user.findFirst({
-        where: {
-          role: userRole as any,
-          name: { contains: loggedInName, mode: "insensitive" }
-        }
-      });
-    }
+    const user = await prisma.user.findUnique({
+      where: { id: session.userId },
+    });
 
     if (!user) {
-      const defaultEmail = loggedInName === "Kajal Sharma" ? "kajal@youistic.com" : loggedInName === "Suhani" ? "suhani@youistic.com" : loggedInName === "Kiyam" ? "kiyam@youistic.com" : "ceo@youistic.os";
-      const defaultPhone = loggedInName === "Kajal Sharma" ? "+91 98765 11002" : loggedInName === "Suhani" ? "+91 98765 11001" : loggedInName === "Kiyam" ? "+91 98765 11003" : "+91 98765 11000";
-      try {
-        user = await prisma.user.create({
-          data: {
-            name: loggedInName,
-            email: defaultEmail,
-            phone: defaultPhone,
-            role: userRole as any
-          }
-        });
-      } catch {
-        user = await prisma.user.findFirst();
-      }
+      return { success: false, error: "User profile not found" };
     }
 
-    return { success: true, user, loggedInName, userRole };
+    return {
+      success: true,
+      user,
+      loggedInName: session.name,
+      userRole: session.role,
+    };
   } catch (error) {
     console.error("Error getting profile:", error);
     return { success: false, error: "Failed to load profile" };
@@ -59,56 +34,21 @@ export async function getProfile() {
 
 export async function updateProfile(data: { name: string; email: string; phone?: string }) {
   try {
-    let cookieStore;
-    try {
-      cookieStore = await cookies();
-    } catch {
-      // Fallback
-    }
-    const loggedInName = cookieStore?.get("user_name")?.value || "CEO";
-    const userRole = cookieStore?.get("user_role")?.value || "CEO";
+    const session = await requireAuth();
 
-    let user = null;
-    if (loggedInName && loggedInName !== "CEO") {
-      user = await prisma.user.findFirst({
-        where: {
-          name: { contains: loggedInName, mode: "insensitive" }
-        }
-      });
-    }
-
-    if (!user && userRole) {
-      user = await prisma.user.findFirst({
-        where: {
-          role: userRole as any
-        }
-      });
-    }
-
-    if (user) {
-      await prisma.user.update({
-        where: { id: user.id },
-        data: {
-          name: data.name,
-          email: data.email,
-          phone: data.phone
-        }
-      });
-    }
-
-    if (cookieStore) {
-      cookieStore.set("user_name", data.name, {
-        httpOnly: false,
-        secure: process.env.NODE_ENV === "production",
-        maxAge: 60 * 60 * 24 * 7,
-        path: "/",
-      });
-    }
+    await prisma.user.update({
+      where: { id: session.userId },
+      data: {
+        name: data.name,
+        email: data.email,
+        phone: data.phone || null,
+      },
+    });
 
     try {
       revalidatePath("/dashboard/settings");
     } catch {
-      // Ignore
+      // Ignore outside request context
     }
 
     return { success: true };
@@ -120,9 +60,34 @@ export async function updateProfile(data: { name: string; email: string; phone?:
 
 export async function updatePassword(data: { currentPassword?: string; newPassword?: string }) {
   try {
+    const session = await requireAuth();
+
     if (!data.newPassword || data.newPassword.length < 6) {
-      return { success: false, error: "New password must be at least 6 characters" };
+      return { success: false, error: "New password must be at least 6 characters long." };
     }
+
+    const user = await prisma.user.findUnique({
+      where: { id: session.userId },
+    });
+
+    if (!user) {
+      return { success: false, error: "User account not found." };
+    }
+
+    // If existing passwordHash exists, verify current password
+    if (user.passwordHash && data.currentPassword) {
+      const isValid = bcrypt.compareSync(data.currentPassword, user.passwordHash);
+      if (!isValid) {
+        return { success: false, error: "Current password is incorrect." };
+      }
+    }
+
+    // Hash and store new password securely
+    const newPasswordHash = bcrypt.hashSync(data.newPassword, 10);
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { passwordHash: newPasswordHash },
+    });
 
     try {
       revalidatePath("/dashboard/settings");
@@ -133,6 +98,9 @@ export async function updatePassword(data: { currentPassword?: string; newPasswo
     return { success: true };
   } catch (error) {
     console.error("Error updating password:", error);
-    return { success: false, error: "Failed to update password" };
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to update password",
+    };
   }
 }

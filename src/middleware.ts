@@ -1,19 +1,21 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { verifySessionToken } from "@/lib/auth";
 
 export function middleware(request: NextRequest) {
-  const role = request.cookies.get("user_role")?.value;
   const path = request.nextUrl.pathname;
+  const sessionToken = request.cookies.get("youistic_session")?.value;
+  const session = sessionToken ? verifySessionToken(sessionToken) : null;
+  const role = session?.role;
 
-  // Protect /dashboard routes
-  if (path.startsWith("/dashboard")) {
-    if (!role) {
+  // Protect /dashboard and /ceo routes
+  if (path.startsWith("/dashboard") || path.startsWith("/ceo")) {
+    if (!session || !role) {
       return NextResponse.redirect(new URL("/login", request.url));
     }
 
-    // Role-based restrictions
+    // Role-based route restrictions
     if (role === "SDR") {
-      // SDRs can access /dashboard/sdr, /dashboard/support, /dashboard/crm/tickets, and /dashboard/settings
       if (
         !path.startsWith("/dashboard/sdr") &&
         !path.startsWith("/dashboard/support") &&
@@ -25,15 +27,20 @@ export function middleware(request: NextRequest) {
     }
 
     if (role === "BDE") {
-      // BDEs can access /dashboard/bde, /dashboard/support, /dashboard/crm/tickets, and /dashboard/settings
       if (
         !path.startsWith("/dashboard/bde") &&
         !path.startsWith("/dashboard/support") &&
         !path.startsWith("/dashboard/crm/tickets") &&
+        !path.startsWith("/dashboard/projects") &&
+        !path.startsWith("/dashboard/crm") &&
         !path.startsWith("/dashboard/settings")
       ) {
         return NextResponse.redirect(new URL("/dashboard/bde", request.url));
       }
+    }
+
+    if (path.startsWith("/ceo") && role !== "ADMIN") {
+      return NextResponse.redirect(new URL("/dashboard", request.url));
     }
 
     return NextResponse.next();
@@ -60,10 +67,10 @@ export function middleware(request: NextRequest) {
   }
 
   // Redirect authenticated users away from /login if already logged in
-  if (path === "/login" && role) {
+  if (path === "/login" && session && role) {
     if (role === "SDR") return NextResponse.redirect(new URL("/dashboard/sdr", request.url));
     if (role === "BDE") return NextResponse.redirect(new URL("/dashboard/bde", request.url));
-    return NextResponse.redirect(new URL("/dashboard", request.url));
+    return NextResponse.redirect(new URL("/ceo/dashboard", request.url));
   }
 
   return NextResponse.next();

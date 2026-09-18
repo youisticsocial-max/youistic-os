@@ -3,8 +3,10 @@
 import { LeadStatus } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
+import { requireRole } from "@/lib/auth";
 
 export async function getLeads() {
+  await requireRole(["ADMIN", "SDR", "BDE"]);
   try {
     const leads = await prisma.$queryRawUnsafe<any[]>(
       `SELECT * FROM "leads" ORDER BY "createdAt" DESC`
@@ -17,6 +19,7 @@ export async function getLeads() {
 }
 
 export async function createRawLead(data: { clientName: string; clientPhone?: string; clientEmail?: string; businessName?: string; source?: string; service?: string; comment?: string; imageUrl?: string }) {
+  await requireRole(["ADMIN", "SDR", "BDE"]);
   try {
     const lead = await prisma.lead.create({
       data: {
@@ -24,7 +27,7 @@ export async function createRawLead(data: { clientName: string; clientPhone?: st
         status: "PENDING"
       },
     });
-    revalidatePath("/dashboard/sdr");
+    try { revalidatePath("/dashboard/sdr"); } catch {}
     return lead;
   } catch (error) {
     console.error("Failed to create raw lead:", error);
@@ -33,6 +36,7 @@ export async function createRawLead(data: { clientName: string; clientPhone?: st
 }
 
 export async function bulkCreateRawLeads(leadsData: { clientName: string; clientPhone?: string; clientEmail?: string; businessName?: string; source?: string; service?: string; comment?: string; imageUrl?: string }[]) {
+  await requireRole(["ADMIN", "SDR"]);
   try {
     const leads = leadsData.map(data => ({
       ...data,
@@ -44,7 +48,7 @@ export async function bulkCreateRawLeads(leadsData: { clientName: string; client
       skipDuplicates: true,
     });
     
-    revalidatePath("/dashboard/sdr");
+    try { revalidatePath("/dashboard/sdr"); } catch {}
     return { count: result.count };
   } catch (error) {
     console.error("Failed to bulk create leads:", error);
@@ -53,11 +57,12 @@ export async function bulkCreateRawLeads(leadsData: { clientName: string; client
 }
 
 export async function deleteRawLead(id: string) {
+  await requireRole(["ADMIN", "SDR"]);
   try {
     await prisma.lead.delete({
       where: { id }
     });
-    revalidatePath("/dashboard/sdr");
+    try { revalidatePath("/dashboard/sdr"); } catch {}
   } catch (error) {
     console.error("Failed to delete raw lead:", error);
     throw new Error("Failed to delete raw lead");
@@ -65,11 +70,14 @@ export async function deleteRawLead(id: string) {
 }
 
 export async function deleteAllLeads() {
+  await requireRole(["ADMIN"]);
   try {
     await prisma.lead.deleteMany({});
-    revalidatePath("/dashboard/sdr");
-    revalidatePath("/dashboard/bde");
-    revalidatePath("/ceo/dashboard");
+    try {
+      revalidatePath("/dashboard/sdr");
+      revalidatePath("/dashboard/bde");
+      revalidatePath("/ceo/dashboard");
+    } catch {}
     return { success: true };
   } catch (error) {
     console.error("Failed to delete all leads:", error);
@@ -83,6 +91,7 @@ export async function updateLeadStatus(
   followUpDate?: Date | string | null, 
   followUpNote?: string | null
 ) {
+  await requireRole(["ADMIN", "SDR", "BDE"]);
   try {
     await prisma.$executeRawUnsafe(
       `UPDATE "leads" SET "status" = $1::"LeadStatus", "updatedAt" = NOW() WHERE "id" = $2`,
@@ -110,10 +119,12 @@ export async function updateLeadStatus(
       `SELECT * FROM "leads" WHERE "id" = $1`,
       id
     );
-    revalidatePath("/dashboard/sdr");
-    revalidatePath("/dashboard/sdr/pipeline");
-    revalidatePath("/dashboard/bde");
-    revalidatePath("/dashboard/bde/pipeline");
+    try {
+      revalidatePath("/dashboard/sdr");
+      revalidatePath("/dashboard/sdr/pipeline");
+      revalidatePath("/dashboard/bde");
+      revalidatePath("/dashboard/bde/pipeline");
+    } catch {}
     return leads[0] || null;
   } catch (error) {
     console.error("Failed to update lead status:", error);
@@ -126,6 +137,7 @@ export async function scheduleLeadFollowUp(
   followUpDateISO: string, 
   followUpNote?: string
 ) {
+  await requireRole(["ADMIN", "SDR", "BDE"]);
   try {
     if (!id) throw new Error("Lead ID is required");
     const d = new Date(followUpDateISO);
@@ -142,10 +154,12 @@ export async function scheduleLeadFollowUp(
       `SELECT * FROM "leads" WHERE "id" = $1`,
       id
     );
-    revalidatePath("/dashboard/sdr");
-    revalidatePath("/dashboard/sdr/pipeline");
-    revalidatePath("/dashboard/bde");
-    revalidatePath("/dashboard/bde/pipeline");
+    try {
+      revalidatePath("/dashboard/sdr");
+      revalidatePath("/dashboard/sdr/pipeline");
+      revalidatePath("/dashboard/bde");
+      revalidatePath("/dashboard/bde/pipeline");
+    } catch {}
     return leads[0] || null;
   } catch (error) {
     console.error("Failed to schedule follow up:", error);
@@ -163,6 +177,7 @@ export async function convertLeadToClient(
   billingModel: "ONE_TIME" | "RECURRING" = "ONE_TIME",
   renewalAmount: number = 0
 ) {
+  await requireRole(["ADMIN", "BDE"]);
   try {
     const leads = await prisma.$queryRawUnsafe<any[]>(
       `SELECT * FROM "leads" WHERE "id" = $1`,
@@ -234,13 +249,15 @@ export async function convertLeadToClient(
       });
     }
 
-    revalidatePath("/dashboard/sdr");
-    revalidatePath("/dashboard/sdr/pipeline");
-    revalidatePath("/dashboard/bde");
-    revalidatePath("/dashboard/bde/pipeline");
-    revalidatePath("/dashboard/crm");
-    revalidatePath("/dashboard/projects");
-    revalidatePath("/dashboard/finance");
+    try {
+      revalidatePath("/dashboard/sdr");
+      revalidatePath("/dashboard/sdr/pipeline");
+      revalidatePath("/dashboard/bde");
+      revalidatePath("/dashboard/bde/pipeline");
+      revalidatePath("/dashboard/crm");
+      revalidatePath("/dashboard/projects");
+      revalidatePath("/dashboard/finance");
+    } catch {}
     return client;
   } catch (error) {
     console.error("Failed to convert lead to client:", error);

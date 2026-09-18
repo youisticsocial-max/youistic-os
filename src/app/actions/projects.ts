@@ -2,8 +2,10 @@
 
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
+import { requireRole } from "@/lib/auth";
 
 export async function getProjects() {
+  await requireRole(["ADMIN", "BDE", "SDR"]);
   try {
     const projects = await prisma.project.findMany({
       include: {
@@ -19,11 +21,8 @@ export async function getProjects() {
   }
 }
 
-/**
- * Call this once to auto-create missing project records for clients.
- * NOT called on every page load — only when explicitly needed.
- */
 export async function syncClientProjects() {
+  await requireRole(["ADMIN", "BDE"]);
   try {
     const clients = await prisma.client.findMany({
       include: { projects: true }
@@ -61,6 +60,7 @@ export async function createProject(data: {
   status?: "PLANNING" | "IN_PROGRESS" | "REVIEW" | "DELIVERED";
   description?: string;
 }) {
+  await requireRole(["ADMIN", "BDE"]);
   try {
     const project = await prisma.project.create({
       data: {
@@ -71,7 +71,7 @@ export async function createProject(data: {
         description: data.description || null,
       },
     });
-    revalidatePath("/dashboard/projects");
+    try { revalidatePath("/dashboard/projects"); } catch {}
     return project;
   } catch (error) {
     console.error("Failed to create project:", error);
@@ -80,12 +80,13 @@ export async function createProject(data: {
 }
 
 export async function updateProjectStatus(id: string, status: "PLANNING" | "IN_PROGRESS" | "REVIEW" | "DELIVERED") {
+  await requireRole(["ADMIN", "BDE"]);
   try {
     const updated = await prisma.project.update({
       where: { id },
       data: { status: status as any },
     });
-    revalidatePath("/dashboard/projects");
+    try { revalidatePath("/dashboard/projects"); } catch {}
     return updated;
   } catch (error) {
     console.error("Failed to update project status:", error);
@@ -99,6 +100,7 @@ export async function createTask(data: {
   stage?: "TODO" | "IN_PROGRESS" | "REVIEW" | "DONE";
   priority?: "LOW" | "MEDIUM" | "HIGH" | "URGENT";
 }) {
+  await requireRole(["ADMIN", "BDE", "SDR"]);
   try {
     const task = await prisma.task.create({
       data: {
@@ -108,7 +110,7 @@ export async function createTask(data: {
         priority: (data.priority as any) || "MEDIUM",
       },
     });
-    revalidatePath("/dashboard/projects");
+    try { revalidatePath("/dashboard/projects"); } catch {}
     return task;
   } catch (error) {
     console.error("Failed to create task:", error);
@@ -117,12 +119,13 @@ export async function createTask(data: {
 }
 
 export async function updateTaskStage(id: string, stage: "TODO" | "IN_PROGRESS" | "REVIEW" | "DONE") {
+  await requireRole(["ADMIN", "BDE", "SDR"]);
   try {
     const updated = await prisma.task.update({
       where: { id },
       data: { stage: stage as any },
     });
-    revalidatePath("/dashboard/projects");
+    try { revalidatePath("/dashboard/projects"); } catch {}
     return updated;
   } catch (error) {
     console.error("Failed to update task stage:", error);
@@ -131,9 +134,10 @@ export async function updateTaskStage(id: string, stage: "TODO" | "IN_PROGRESS" 
 }
 
 export async function deleteTask(id: string) {
+  await requireRole(["ADMIN", "BDE"]);
   try {
     await prisma.task.delete({ where: { id } });
-    revalidatePath("/dashboard/projects");
+    try { revalidatePath("/dashboard/projects"); } catch {}
     return { success: true };
   } catch (error) {
     console.error("Failed to delete task:", error);
@@ -142,15 +146,17 @@ export async function deleteTask(id: string) {
 }
 
 export async function deleteAllProjectsAndTasks() {
+  await requireRole(["ADMIN"]);
   try {
     await prisma.task.deleteMany({});
     await prisma.project.deleteMany({});
-    revalidatePath("/dashboard/projects");
-    revalidatePath("/ceo/dashboard");
+    try {
+      revalidatePath("/dashboard/projects");
+      revalidatePath("/ceo/dashboard");
+    } catch {}
     return { success: true };
   } catch (error) {
     console.error("Failed to delete projects and tasks:", error);
     throw error;
   }
 }
-

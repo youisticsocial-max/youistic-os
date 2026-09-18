@@ -2,8 +2,10 @@
 
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
+import { requireRole } from "@/lib/auth";
 
 export async function getFinanceSummary() {
+  await requireRole(["ADMIN"]);
   try {
     // Fetch revenue and expenses in PARALLEL
     const [revenueEntries, expenseEntries] = await Promise.all([
@@ -36,6 +38,7 @@ export async function createExpense(data: {
   description: string;
   vendor?: string;
 }) {
+  await requireRole(["ADMIN"]);
   try {
     const expense = await prisma.expenseEntry.create({
       data: {
@@ -46,8 +49,10 @@ export async function createExpense(data: {
         vendor: data.vendor || null,
       },
     });
-    revalidatePath("/dashboard/finance");
-    revalidatePath("/ceo/dashboard");
+    try {
+      revalidatePath("/dashboard/finance");
+      revalidatePath("/ceo/dashboard");
+    } catch {}
     return expense;
   } catch (error) {
     console.error("Failed to create expense:", error);
@@ -64,6 +69,7 @@ export async function createRevenue(data: {
   description?: string;
   invoiceNumber?: string;
 }) {
+  await requireRole(["ADMIN", "BDE"]);
   try {
     const revenue = await prisma.revenueEntry.create({
       data: {
@@ -76,8 +82,10 @@ export async function createRevenue(data: {
         invoiceNumber: data.invoiceNumber || null,
       },
     });
-    revalidatePath("/dashboard/finance");
-    revalidatePath("/ceo/dashboard");
+    try {
+      revalidatePath("/dashboard/finance");
+      revalidatePath("/ceo/dashboard");
+    } catch {}
     return revenue;
   } catch (error) {
     console.error("Failed to create revenue:", error);
@@ -86,18 +94,19 @@ export async function createRevenue(data: {
 }
 
 export async function updateRevenueStatus(id: string, paymentStatus: "PAID" | "PENDING" | "OVERDUE") {
+  await requireRole(["ADMIN"]);
   try {
     const updated = await prisma.revenueEntry.update({
       where: { id },
       data: { paymentStatus },
     });
-    revalidatePath("/dashboard/finance");
-    revalidatePath("/ceo/dashboard");
+    try {
+      revalidatePath("/dashboard/finance");
+      revalidatePath("/ceo/dashboard");
+    } catch {}
     return updated;
   } catch (error) {
     console.error("Failed to update revenue status:", error);
     throw error;
   }
 }
-
-
