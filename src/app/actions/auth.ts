@@ -50,7 +50,7 @@ export async function verifyAndLogin(
     },
   });
 
-  if (!user) {
+  if (!user || !user.isActive) {
     return { success: false, error: "Invalid credentials. Please check your credentials and try again." };
   }
 
@@ -67,15 +67,16 @@ export async function verifyAndLogin(
     return { success: false, error: "Invalid credentials. Please check your password and try again." };
   }
 
-  // Issue secure httpOnly, signed session cookie
+  // Issue secure httpOnly, signed session cookie with user's sessionVersion
   await createSessionCookie({
     id: user.id,
     email: user.email,
     role: user.role,
     name: user.name,
+    sessionVersion: user.sessionVersion || 0,
   });
 
-  return { success: true, role, userName: user.name };
+  return { success: true, role: user.role, userName: user.name };
 }
 
 export async function loginAction(

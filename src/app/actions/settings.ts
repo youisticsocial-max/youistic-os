@@ -3,7 +3,7 @@
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
-import { getAuthenticatedSession, requireAuth } from "@/lib/auth";
+import { createSessionCookie, getAuthenticatedSession, requireAuth } from "@/lib/auth";
 
 export async function getProfile() {
   try {
@@ -16,8 +16,8 @@ export async function getProfile() {
       where: { id: session.userId },
     });
 
-    if (!user) {
-      return { success: false, error: "User profile not found" };
+    if (!user || !user.isActive) {
+      return { success: false, error: "User profile not found or inactive." };
     }
 
     return {
@@ -62,19 +62,19 @@ export async function updatePassword(data: { currentPassword?: string; newPasswo
   try {
     const session = await requireAuth();
 
-    if (!data.newPassword || data.newPassword.length < 6) {
-      return { success: false, error: "New password must be at least 6 characters long." };
+    if (!data.newPassword || data.newPassword.length < 12) {
+      return { success: false, error: "New password must be at least 12 characters long." };
     }
 
     const user = await prisma.user.findUnique({
       where: { id: session.userId },
     });
 
-    if (!user) {
-      return { success: false, error: "User account not found." };
+    if (!user || !user.isActive) {
+      return { success: false, error: "User account not found or inactive." };
     }
 
-    // If existing passwordHash exists, verify current password
+    // Verify current password
     if (user.passwordHash && data.currentPassword) {
       const isValid = bcrypt.compareSync(data.currentPassword, user.passwordHash);
       if (!isValid) {
@@ -82,11 +82,23 @@ export async function updatePassword(data: { currentPassword?: string; newPasswo
       }
     }
 
-    // Hash and store new password securely
+    // Hash new password and increment sessionVersion to revoke all older active sessions
     const newPasswordHash = bcrypt.hashSync(data.newPassword, 10);
-    await prisma.user.update({
+    const updatedUser = await prisma.user.update({
       where: { id: user.id },
-      data: { passwordHash: newPasswordHash },
+      data: {
+        passwordHash: newPasswordHash,
+        sessionVersion: { increment: 1 },
+      },
+    });
+
+    // Re-issue session cookie for the current logged-in user with updated sessionVersion
+    await createSessionCookie({
+      id: updatedUser.id,
+      email: updatedUser.email,
+      role: updatedUser.role,
+      name: updatedUser.name,
+      sessionVersion: updatedUser.sessionVersion,
     });
 
     try {

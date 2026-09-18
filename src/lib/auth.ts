@@ -1,12 +1,14 @@
 import crypto from "crypto";
 import { cookies } from "next/headers";
 import { UserRole } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
 
 export interface SessionPayload {
   userId: string;
   email: string;
   role: UserRole;
   name: string;
+  sessionVersion: number;
   iat: number;
   exp: number;
 }
@@ -32,6 +34,7 @@ export function signSessionToken(user: {
   email: string;
   role: UserRole;
   name: string;
+  sessionVersion?: number;
 }): string {
   const iat = Math.floor(Date.now() / 1000);
   const exp = iat + SESSION_MAX_AGE_SECONDS;
@@ -40,6 +43,7 @@ export function signSessionToken(user: {
     email: user.email,
     role: user.role,
     name: user.name,
+    sessionVersion: user.sessionVersion || 0,
     iat,
     exp,
   };
@@ -102,6 +106,7 @@ export async function createSessionCookie(user: {
   email: string;
   role: UserRole;
   name: string;
+  sessionVersion?: number;
 }) {
   const token = signSessionToken(user);
   const cookieStore = await cookies();
@@ -136,14 +141,48 @@ export async function clearSessionCookie() {
 }
 
 /**
- * Reads and verifies the current session from incoming request cookies.
+ * Reads and verifies the current session from incoming request cookies,
+ * validating HMAC signature, DB account active status (isActive), sessionVersion,
+ * and fetching current authoritative DB role.
  */
 export async function getAuthenticatedSession(): Promise<SessionPayload | null> {
   try {
     const cookieStore = await cookies();
     const token = cookieStore.get(SESSION_COOKIE_NAME)?.value;
     if (!token) return null;
-    return verifySessionToken(token);
+
+    const payload = verifySessionToken(token);
+    if (!payload) return null;
+
+    // DB-backed Authoritative Verification: Verify user active status & sessionVersion revocation
+    const user = await prisma.user.findUnique({
+      where: { id: payload.userId },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        isActive: true,
+        sessionVersion: true,
+      },
+    });
+
+    if (!user || !user.isActive) {
+      return null; // Reject disabled or deleted user sessions
+    }
+
+    // Revoke session if sessionVersion in DB has been incremented (e.g. password changed)
+    if (user.sessionVersion !== payload.sessionVersion) {
+      return null;
+    }
+
+    // Return session payload using current authoritative DB role and info
+    return {
+      ...payload,
+      role: user.role,
+      name: user.name,
+      email: user.email,
+    };
   } catch {
     return null;
   }
