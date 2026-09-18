@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { verifySessionToken } from "@/lib/auth";
 
+export const runtime = "nodejs";
+
 export function middleware(request: NextRequest) {
   const path = request.nextUrl.pathname;
   const sessionToken = request.cookies.get("youistic_session")?.value;
