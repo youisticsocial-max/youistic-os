@@ -12,6 +12,10 @@
  */
 
 const { PrismaClient } = require("@prisma/client");
+const { Pool } = require("pg");
+const { PrismaPg } = require("@prisma/adapter-pg");
+const path = require("path");
+require("dotenv").config({ path: path.join(__dirname, "../.env") });
 const bcrypt = require("bcryptjs");
 const readline = require("readline");
 
@@ -74,7 +78,9 @@ async function main() {
     process.exit(1);
   }
 
-  const prisma = new PrismaClient();
+  const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+  const adapter = new PrismaPg(pool);
+  const prisma = new PrismaClient({ adapter });
 
   try {
     const user = await prisma.user.findFirst({
@@ -99,6 +105,7 @@ async function main() {
     process.exit(1);
   } finally {
     await prisma.$disconnect();
+    await pool.end();
   }
 }
 
