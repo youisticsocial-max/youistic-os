@@ -13,30 +13,16 @@ export async function getMeetings() {
         orderBy: { meetingDate: "asc" },
         include: { host: true },
       });
-    } else if (session.role === "BDE") {
+    } else {
+      // Non-admin (SDR & BDE): Strictly user-isolated meeting scoping
       return await prisma.meeting.findMany({
         where: {
-          OR: [
-            { hostId: session.userId },
-            { host: { role: UserRole.BDE } },
-          ],
-        },
-        orderBy: { meetingDate: "asc" },
-        include: { host: true },
-      });
-    } else if (session.role === "SDR") {
-      return await prisma.meeting.findMany({
-        where: {
-          OR: [
-            { hostId: session.userId },
-            { host: { role: UserRole.SDR } },
-          ],
+          hostId: session.userId,
         },
         orderBy: { meetingDate: "asc" },
         include: { host: true },
       });
     }
-    return [];
   } catch (error) {
     console.error("Failed to fetch meetings:", error);
     return [];
@@ -125,8 +111,8 @@ export async function updateMeetingStatus(id: string, status: MeetingStatus) {
     const existing = await prisma.meeting.findUnique({ where: { id }, include: { host: true } });
     if (!existing) throw new Error("Meeting not found");
 
-    if (session.role !== "ADMIN" && existing.hostId !== session.userId && existing.host?.role !== session.role) {
-      throw new Error("FORBIDDEN: You are not authorized to update this meeting.");
+    if (session.role !== "ADMIN" && existing.hostId !== session.userId) {
+      throw new Error("FORBIDDEN: You are not authorized to update another user's meeting.");
     }
 
     const meeting = await prisma.meeting.update({
@@ -151,8 +137,8 @@ export async function updateMeetingDetails(id: string, data: {
     const existing = await prisma.meeting.findUnique({ where: { id }, include: { host: true } });
     if (!existing) throw new Error("Meeting not found");
 
-    if (session.role !== "ADMIN" && existing.hostId !== session.userId && existing.host?.role !== session.role) {
-      throw new Error("FORBIDDEN: You are not authorized to update this meeting.");
+    if (session.role !== "ADMIN" && existing.hostId !== session.userId) {
+      throw new Error("FORBIDDEN: You are not authorized to update another user's meeting.");
     }
 
     const meeting = await prisma.meeting.update({
