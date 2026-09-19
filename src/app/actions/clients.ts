@@ -2,8 +2,10 @@
 
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
+import { requireRole } from "@/lib/auth";
 
 export async function getClients() {
+  await requireRole(["ADMIN", "BDE", "SDR"]);
   try {
     const clients = await prisma.client.findMany({
       orderBy: { createdAt: "desc" },
@@ -16,6 +18,7 @@ export async function getClients() {
 }
 
 export async function deleteClient(id: string) {
+  await requireRole(["ADMIN"]);
   try {
     await prisma.revenueEntry.deleteMany({ where: { clientId: id } });
     await prisma.task.deleteMany({ where: { project: { clientId: id } } });
@@ -23,7 +26,9 @@ export async function deleteClient(id: string) {
     await prisma.ticketComment.deleteMany({ where: { ticket: { clientId: id } } });
     await prisma.supportTicket.deleteMany({ where: { clientId: id } });
     await prisma.client.delete({ where: { id } });
-    revalidatePath("/dashboard/crm");
+    try {
+      revalidatePath("/dashboard/crm");
+    } catch {}
     return { success: true };
   } catch (error) {
     console.error("Failed to delete client:", error);
@@ -32,7 +37,9 @@ export async function deleteClient(id: string) {
       await prisma.$executeRawUnsafe(`DELETE FROM "projects" WHERE "clientId" = $1`, id).catch(() => {});
       await prisma.$executeRawUnsafe(`DELETE FROM "support_tickets" WHERE "clientId" = $1`, id).catch(() => {});
       await prisma.$executeRawUnsafe(`DELETE FROM "clients" WHERE "id" = $1`, id);
-      revalidatePath("/dashboard/crm");
+      try {
+        revalidatePath("/dashboard/crm");
+      } catch {}
       return { success: true };
     } catch (rawErr) {
       throw new Error(`Failed to delete client: ${rawErr instanceof Error ? rawErr.message : String(rawErr)}`);
@@ -55,6 +62,7 @@ export async function createClient(data: {
   salesCloseDate?: Date | string | null;
   renewalDate?: Date | string | null;
 }) {
+  await requireRole(["ADMIN", "BDE"]);
   const companyName = data.companyName || "";
   const contactPerson = data.contactPerson || "";
   const email = data.email || null;
@@ -69,7 +77,6 @@ export async function createClient(data: {
 
   const salesCloseDate = data.salesCloseDate ? new Date(data.salesCloseDate) : new Date();
   
-  // Calculate default +1 year renewal date if not provided
   let renewalDate: Date;
   if (data.renewalDate) {
     renewalDate = new Date(data.renewalDate);
@@ -96,7 +103,9 @@ export async function createClient(data: {
         renewalDate,
       } as any,
     });
-    revalidatePath("/dashboard/crm");
+    try {
+      revalidatePath("/dashboard/crm");
+    } catch {}
     return client;
   } catch (error) {
     console.warn("Prisma ORM create failed, attempting direct raw SQL insert fallback:", error);
@@ -107,7 +116,9 @@ export async function createClient(data: {
          VALUES ($1, $2, $3, $4, $5, $6::"ServiceType", $7, $8, $9, $10::"ClientStatus", $11, $12, $13, $14, NOW(), NOW())`,
         id, companyName, contactPerson, email, phone, serviceType, billingModel, contractValue, renewalAmount, status, industry, notes, salesCloseDate, renewalDate
       );
-      revalidatePath("/dashboard/crm");
+      try {
+        revalidatePath("/dashboard/crm");
+      } catch {}
       return { id, companyName, contactPerson, email, phone, serviceType, billingModel, contractValue, renewalAmount, status, industry, notes };
     } catch (rawErr) {
       console.error("Failed to create client with raw SQL fallback:", rawErr);

@@ -1,15 +1,15 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
-import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { TicketPriority, TicketStatus } from "@prisma/client";
+import { requireRole } from "@/lib/auth";
 
 export async function getTickets(filterName?: string) {
+  const session = await requireRole(["ADMIN", "SDR", "BDE", "SUPPORT", "VIEWER"]);
   try {
-    const cookieStore = await cookies();
-    const userRole = cookieStore.get("user_role")?.value || "CEO";
-    const loggedInName = cookieStore.get("user_name")?.value || "CEO";
+    const userRole = session.role;
+    const loggedInName = session.name;
 
     let dbTickets = await prisma.supportTicket.findMany({
       include: {
@@ -19,7 +19,7 @@ export async function getTickets(filterName?: string) {
       orderBy: { createdAt: "desc" },
     });
 
-    const isCeoOrAdmin = userRole === "CEO" || userRole === "ADMIN" || loggedInName === "CEO";
+    const isCeoOrAdmin = userRole === "ADMIN" || loggedInName === "CEO";
     const targetScope = isCeoOrAdmin ? (filterName || "ALL") : loggedInName;
 
     const filtered = dbTickets.filter((t) => {
@@ -52,9 +52,9 @@ export async function getTickets(filterName?: string) {
   } catch (error) {
     console.error("Error fetching tickets:", error);
     return {
-      userRole: "CEO",
-      loggedInName: "CEO",
-      isCeo: true,
+      userRole: session.role,
+      loggedInName: session.name,
+      isCeo: session.role === "ADMIN",
       tickets: [],
     };
   }
@@ -70,14 +70,9 @@ export async function createTicket(data: {
   tags?: string[];
   createdByName?: string;
 }) {
+  const session = await requireRole(["ADMIN", "SDR", "BDE", "SUPPORT"]);
   try {
-    let currentUserName = data.createdByName || "CEO";
-    try {
-      const cookieStore = await cookies();
-      currentUserName = cookieStore.get("user_name")?.value || currentUserName;
-    } catch (cookieErr) {
-      // Ignore if outside request context
-    }
+    let currentUserName = data.createdByName || session.name;
 
     let targetClientId = data.clientId;
     if (!targetClientId && data.clientName) {
@@ -112,9 +107,8 @@ export async function createTicket(data: {
   }
 }
 
-
-
 export async function updateTicketStatus(ticketId: string, status: TicketStatus) {
+  await requireRole(["ADMIN", "SDR", "BDE", "SUPPORT"]);
   try {
     const updated = await prisma.supportTicket.update({
       where: { id: ticketId },
@@ -131,6 +125,7 @@ export async function updateTicketStatus(ticketId: string, status: TicketStatus)
 }
 
 export async function deleteTicket(ticketId: string) {
+  await requireRole(["ADMIN", "SUPPORT"]);
   try {
     await prisma.ticketComment.deleteMany({ where: { ticketId } });
     await prisma.supportTicket.delete({ where: { id: ticketId } });
@@ -145,4 +140,3 @@ export async function deleteTicket(ticketId: string) {
     throw error;
   }
 }
-

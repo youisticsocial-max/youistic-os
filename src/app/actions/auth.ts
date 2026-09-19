@@ -1,53 +1,89 @@
 "use server";
 
-import { cookies } from "next/headers";
+import bcrypt from "bcryptjs";
+import { prisma } from "@/lib/prisma";
+import { UserRole } from "@prisma/client";
+import { createSessionCookie, clearSessionCookie } from "@/lib/auth";
 
-export async function verifyAndLogin(role: "CEO" | "SDR" | "BDE", passwordInput?: string, employeeName?: string) {
+export async function verifyAndLogin(
+  role: "CEO" | "SDR" | "BDE",
+  passwordInput?: string,
+  employeeName?: string
+) {
   const trimmed = (passwordInput || "").trim();
-  let authenticatedName = employeeName || role;
-
-  if (role === "CEO") {
-    if (trimmed !== "@nehran#0225!Ok") {
-      return { success: false, error: "Invalid password. Please try again." };
-    }
-    authenticatedName = "CEO";
-  } else if (role === "SDR") {
-    if (trimmed === "Sshh123456") {
-      authenticatedName = "Suhani";
-    } else if (trimmed === "Ks123456") {
-      authenticatedName = "Kajal Sharma";
-    } else if (trimmed === "SDR123456") {
-      authenticatedName = employeeName || "Suhani";
-    } else {
-      return { success: false, error: "Invalid password. Please try again." };
-    }
-  } else if (role === "BDE") {
-    if (trimmed === "Kym123456" || trimmed === "BDE123456") {
-      authenticatedName = "Kiyam";
-    } else {
-      return { success: false, error: "Invalid password. Please try again." };
-    }
+  if (!trimmed) {
+    return { success: false, error: "Password is required." };
   }
 
-  const cookieStore = await cookies();
-  cookieStore.set("user_role", role, {
-    httpOnly: false,
-    secure: process.env.NODE_ENV === "production",
-    maxAge: 60 * 60 * 24 * 7,
-    path: "/",
+  let targetRoleEnum: UserRole = UserRole.BDE;
+  if (role === "CEO") targetRoleEnum = UserRole.ADMIN;
+  else if (role === "SDR") targetRoleEnum = UserRole.SDR;
+  else if (role === "BDE") targetRoleEnum = UserRole.BDE;
+
+  let authenticatedName = employeeName || role;
+  let targetEmail = "";
+
+  if (role === "CEO") {
+    authenticatedName = "CEO";
+    targetEmail = "ceo@youistic.com";
+  } else if (role === "SDR") {
+    if (employeeName === "Kajal Sharma") {
+      authenticatedName = "Kajal Sharma";
+      targetEmail = "kajal@youistic.com";
+    } else {
+      authenticatedName = "Suhani";
+      targetEmail = "suhani@youistic.com";
+    }
+  } else if (role === "BDE") {
+    authenticatedName = "Kiyam";
+    targetEmail = "kiyam@youistic.com";
+  }
+
+  // Find user record in PostgreSQL database
+  const user = await prisma.user.findFirst({
+    where: {
+      OR: [
+        { email: targetEmail },
+        { name: { contains: authenticatedName, mode: "insensitive" } },
+        { role: targetRoleEnum },
+      ],
+    },
   });
 
-  cookieStore.set("user_name", authenticatedName, {
-    httpOnly: false,
-    secure: process.env.NODE_ENV === "production",
-    maxAge: 60 * 60 * 24 * 7,
-    path: "/",
+  if (!user || !user.isActive) {
+    return { success: false, error: "Invalid credentials. Please check your credentials and try again." };
+  }
+
+  if (!user.passwordHash) {
+    return {
+      success: false,
+      error: "Account initialization required. Please contact system administrator to set up your password.",
+    };
+  }
+
+  const isPasswordValid = bcrypt.compareSync(trimmed, user.passwordHash);
+
+  if (!isPasswordValid) {
+    return { success: false, error: "Invalid credentials. Please check your password and try again." };
+  }
+
+  // Issue secure httpOnly, signed session cookie with user's sessionVersion
+  await createSessionCookie({
+    id: user.id,
+    email: user.email,
+    role: user.role,
+    name: user.name,
+    sessionVersion: user.sessionVersion || 0,
   });
 
-  return { success: true, role, userName: authenticatedName };
+  return { success: true, role: user.role, userName: user.name };
 }
 
-export async function loginAction(role: "CEO" | "SDR" | "BDE", passwordInput?: string, employeeName?: string) {
+export async function loginAction(
+  role: "CEO" | "SDR" | "BDE",
+  passwordInput?: string,
+  employeeName?: string
+) {
   const res = await verifyAndLogin(role, passwordInput, employeeName);
   if (!res.success) {
     throw new Error(res.error);
@@ -56,7 +92,5 @@ export async function loginAction(role: "CEO" | "SDR" | "BDE", passwordInput?: s
 }
 
 export async function logoutAction() {
-  const cookieStore = await cookies();
-  cookieStore.delete("user_role");
-  cookieStore.delete("user_name");
+  await clearSessionCookie();
 }

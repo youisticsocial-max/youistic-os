@@ -3,8 +3,10 @@
 import fs from "fs";
 import path from "path";
 import crypto from "crypto";
+import { requireAuth } from "@/lib/auth";
 
 export async function uploadBase64Image(base64Data: string): Promise<string> {
+  await requireAuth();
   try {
     const uploadDir = path.join(process.cwd(), "public", "uploads");
     if (!fs.existsSync(uploadDir)) {

@@ -1,10 +1,29 @@
+require('dotenv').config();
 const fs = require('fs');
 const { Client } = require('pg');
 
+const connectionString = process.env.DATABASE_URL;
+
+if (!connectionString) {
+  console.error("Error: DATABASE_URL environment variable is missing.");
+  process.exit(1);
+}
+
+if (process.env.ALLOW_SCHEMA_MUTATION !== "YES") {
+  console.error("WARNING: setup-db.js modifies database schema!");
+  console.error("Execution blocked. To run this script, set environment variable ALLOW_SCHEMA_MUTATION=YES");
+  process.exit(1);
+}
+
 async function main() {
-  const client = new Client({
-    connectionString: 'postgresql://neondb_owner:npg_5oFXVn4vNQtP@ep-gentle-mud-azrppicb.c-3.ap-southeast-1.aws.neon.tech/neondb?sslmode=require',
-  });
+  let hostname = "target DB";
+  try {
+    hostname = new URL(connectionString).hostname;
+  } catch (e) {}
+
+  console.log(`Executing schema setup on host: ${hostname}...`);
+
+  const client = new Client({ connectionString });
 
   try {
     await client.connect();
@@ -18,7 +37,7 @@ async function main() {
     console.log('Schema created successfully!');
 
   } catch (err) {
-    console.error('Error creating schema:', err);
+    console.error('Error creating schema:', err.message);
   } finally {
     await client.end();
   }

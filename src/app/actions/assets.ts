@@ -2,6 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
+import { requireRole } from "@/lib/auth";
 
 export async function initAssetsTable() {
   try {
@@ -39,6 +40,7 @@ export async function initAssetsTable() {
 }
 
 export async function getClientAssets() {
+  await requireRole(["ADMIN"]);
   try {
     await initAssetsTable();
     const assets = await prisma.$queryRawUnsafe<any[]>(
@@ -70,6 +72,7 @@ export async function createClientAsset(data: {
   githubRepo?: string;
   notes?: string;
 }) {
+  await requireRole(["ADMIN"]);
   try {
     await initAssetsTable();
     const id = `asset_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
@@ -102,8 +105,10 @@ export async function createClientAsset(data: {
       data.notes || null
     );
 
-    revalidatePath("/ceo/assets");
-    revalidatePath("/dashboard/assets");
+    try {
+      revalidatePath("/ceo/assets");
+      revalidatePath("/dashboard/assets");
+    } catch {}
     return { success: true, id };
   } catch (error) {
     console.error("Failed to create client asset:", error);
@@ -112,6 +117,7 @@ export async function createClientAsset(data: {
 }
 
 export async function updateClientAsset(id: string, data: any) {
+  await requireRole(["ADMIN"]);
   try {
     await initAssetsTable();
     const assetType = data.assetType || "CLIENT";
@@ -156,8 +162,10 @@ export async function updateClientAsset(id: string, data: any) {
       id
     );
 
-    revalidatePath("/ceo/assets");
-    revalidatePath("/dashboard/assets");
+    try {
+      revalidatePath("/ceo/assets");
+      revalidatePath("/dashboard/assets");
+    } catch {}
     return { success: true };
   } catch (error) {
     console.error("Failed to update client asset:", error);
@@ -166,11 +174,14 @@ export async function updateClientAsset(id: string, data: any) {
 }
 
 export async function deleteClientAsset(id: string) {
+  await requireRole(["ADMIN"]);
   try {
     await initAssetsTable();
     await prisma.$executeRawUnsafe(`DELETE FROM "client_assets" WHERE "id" = $1`, id);
-    revalidatePath("/ceo/assets");
-    revalidatePath("/dashboard/assets");
+    try {
+      revalidatePath("/ceo/assets");
+      revalidatePath("/dashboard/assets");
+    } catch {}
     return { success: true };
   } catch (error) {
     console.error("Failed to delete client asset:", error);
@@ -179,11 +190,14 @@ export async function deleteClientAsset(id: string) {
 }
 
 export async function deleteAllClientAssets() {
+  await requireRole(["ADMIN"]);
   try {
     await initAssetsTable();
     await prisma.$executeRawUnsafe(`DELETE FROM "client_assets"`);
-    revalidatePath("/ceo/assets");
-    revalidatePath("/dashboard/assets");
+    try {
+      revalidatePath("/ceo/assets");
+      revalidatePath("/dashboard/assets");
+    } catch {}
     return { success: true };
   } catch (error) {
     console.error("Failed to delete all client assets:", error);
