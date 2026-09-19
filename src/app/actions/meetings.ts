@@ -6,15 +6,37 @@ import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth";
 
 export async function getMeetings() {
-  await requireRole(["ADMIN", "BDE", "SDR"]);
+  const session = await requireRole(["ADMIN", "BDE", "SDR"]);
   try {
-    const meetings = await prisma.meeting.findMany({
-      orderBy: { meetingDate: "asc" },
-      include: {
-        host: true,
-      },
-    });
-    return meetings;
+    if (session.role === "ADMIN") {
+      return await prisma.meeting.findMany({
+        orderBy: { meetingDate: "asc" },
+        include: { host: true },
+      });
+    } else if (session.role === "BDE") {
+      return await prisma.meeting.findMany({
+        where: {
+          OR: [
+            { hostId: session.userId },
+            { host: { role: UserRole.BDE } },
+          ],
+        },
+        orderBy: { meetingDate: "asc" },
+        include: { host: true },
+      });
+    } else if (session.role === "SDR") {
+      return await prisma.meeting.findMany({
+        where: {
+          OR: [
+            { hostId: session.userId },
+            { host: { role: UserRole.SDR } },
+          ],
+        },
+        orderBy: { meetingDate: "asc" },
+        include: { host: true },
+      });
+    }
+    return [];
   } catch (error) {
     console.error("Failed to fetch meetings:", error);
     return [];
@@ -45,30 +67,34 @@ export async function createMeeting(data: {
   assignedRole?: "CEO" | "BDE" | "SDR";
   hostId?: string;
 }) {
-  await requireRole(["ADMIN", "BDE", "SDR"]);
+  const session = await requireRole(["ADMIN", "BDE", "SDR"]);
   try {
     let hostId = data.hostId;
 
     if (!hostId) {
-      const requestedRole = data.assignedRole || "BDE";
-      let roleEnum: UserRole = UserRole.BDE;
-      if (requestedRole === "CEO") roleEnum = UserRole.ADMIN;
-      else if (requestedRole === "SDR") roleEnum = UserRole.SDR;
+      if (session.role === "BDE" || session.role === "SDR") {
+        hostId = session.userId;
+      } else {
+        const requestedRole = data.assignedRole || "BDE";
+        let roleEnum: UserRole = UserRole.BDE;
+        if (requestedRole === "CEO") roleEnum = UserRole.ADMIN;
+        else if (requestedRole === "SDR") roleEnum = UserRole.SDR;
 
-      let host = await prisma.user.findFirst({ where: { role: roleEnum } });
-      if (!host) {
-        host = await prisma.user.findFirst({ where: { role: UserRole.ADMIN } });
+        let host = await prisma.user.findFirst({ where: { role: roleEnum } });
+        if (!host) {
+          host = await prisma.user.findFirst({ where: { role: UserRole.ADMIN } });
+        }
+        if (!host) {
+          host = await prisma.user.create({
+            data: {
+              name: `${requestedRole} Lead`,
+              email: `${requestedRole.toLowerCase()}@youistic.com`,
+              role: roleEnum,
+            },
+          });
+        }
+        hostId = host.id;
       }
-      if (!host) {
-        host = await prisma.user.create({
-          data: {
-            name: `${requestedRole} Lead`,
-            email: `${requestedRole.toLowerCase()}@youistic.com`,
-            role: roleEnum,
-          },
-        });
-      }
-      hostId = host.id;
     }
 
     const meeting = await prisma.meeting.create({
@@ -94,8 +120,15 @@ export async function createMeeting(data: {
 }
 
 export async function updateMeetingStatus(id: string, status: MeetingStatus) {
-  await requireRole(["ADMIN", "BDE", "SDR"]);
+  const session = await requireRole(["ADMIN", "BDE", "SDR"]);
   try {
+    const existing = await prisma.meeting.findUnique({ where: { id }, include: { host: true } });
+    if (!existing) throw new Error("Meeting not found");
+
+    if (session.role !== "ADMIN" && existing.hostId !== session.userId && existing.host?.role !== session.role) {
+      throw new Error("FORBIDDEN: You are not authorized to update this meeting.");
+    }
+
     const meeting = await prisma.meeting.update({
       where: { id },
       data: { status },
@@ -113,8 +146,15 @@ export async function updateMeetingDetails(id: string, data: {
   meetingDate?: Date;
   notes?: string;
 }) {
-  await requireRole(["ADMIN", "BDE", "SDR"]);
+  const session = await requireRole(["ADMIN", "BDE", "SDR"]);
   try {
+    const existing = await prisma.meeting.findUnique({ where: { id }, include: { host: true } });
+    if (!existing) throw new Error("Meeting not found");
+
+    if (session.role !== "ADMIN" && existing.hostId !== session.userId && existing.host?.role !== session.role) {
+      throw new Error("FORBIDDEN: You are not authorized to update this meeting.");
+    }
+
     const meeting = await prisma.meeting.update({
       where: { id },
       data: {
@@ -135,8 +175,15 @@ export async function updateMeetingDetails(id: string, data: {
 }
 
 export async function deleteMeeting(id: string) {
-  await requireRole(["ADMIN", "BDE"]);
+  const session = await requireRole(["ADMIN", "BDE"]);
   try {
+    const existing = await prisma.meeting.findUnique({ where: { id }, include: { host: true } });
+    if (!existing) return;
+
+    if (session.role !== "ADMIN" && existing.hostId !== session.userId) {
+      throw new Error("FORBIDDEN: You cannot delete another user's meeting.");
+    }
+
     await prisma.meeting.delete({
       where: { id }
     });

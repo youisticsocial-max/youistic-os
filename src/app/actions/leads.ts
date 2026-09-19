@@ -6,12 +6,35 @@ import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth";
 
 export async function getLeads() {
-  await requireRole(["ADMIN", "SDR", "BDE"]);
+  const session = await requireRole(["ADMIN", "SDR", "BDE"]);
   try {
-    const leads = await prisma.$queryRawUnsafe<any[]>(
-      `SELECT * FROM "leads" ORDER BY "createdAt" DESC`
-    );
-    return leads;
+    if (session.role === "ADMIN") {
+      const leads = await prisma.$queryRawUnsafe<any[]>(
+        `SELECT * FROM "leads" ORDER BY "createdAt" DESC`
+      );
+      return leads;
+    } else if (session.role === "SDR") {
+      // SDR sees: own assigned leads + Shared Pool unassigned leads (excluding BDE field leads)
+      const leads = await prisma.$queryRawUnsafe<any[]>(
+        `SELECT * FROM "leads" 
+         WHERE "assignedSdrId" = $1 
+            OR ("assignedSdrId" IS NULL AND ("source" IS NULL OR "source" != 'BDE Field'))
+         ORDER BY "createdAt" DESC`,
+        session.userId
+      );
+      return leads;
+    } else if (session.role === "BDE") {
+      // BDE sees: BDE Field leads + leads assigned to this BDE
+      const leads = await prisma.$queryRawUnsafe<any[]>(
+        `SELECT * FROM "leads" 
+         WHERE "source" = 'BDE Field' 
+            OR "assignedSdrId" = $1
+         ORDER BY "createdAt" DESC`,
+        session.userId
+      );
+      return leads;
+    }
+    return [];
   } catch (error) {
     console.error("Failed to fetch leads:", error);
     return [];
@@ -19,11 +42,16 @@ export async function getLeads() {
 }
 
 export async function createRawLead(data: { clientName: string; clientPhone?: string; clientEmail?: string; businessName?: string; source?: string; service?: string; comment?: string; imageUrl?: string }) {
-  await requireRole(["ADMIN", "SDR", "BDE"]);
+  const session = await requireRole(["ADMIN", "SDR", "BDE"]);
   try {
+    const assignedSdrId = session.role === "SDR" ? session.userId : undefined;
+    const source = session.role === "BDE" ? (data.source || "BDE Field") : data.source;
+
     const lead = await prisma.lead.create({
       data: {
         ...data,
+        source: source,
+        assignedSdrId: assignedSdrId,
         status: "PENDING"
       },
     });
@@ -36,10 +64,12 @@ export async function createRawLead(data: { clientName: string; clientPhone?: st
 }
 
 export async function bulkCreateRawLeads(leadsData: { clientName: string; clientPhone?: string; clientEmail?: string; businessName?: string; source?: string; service?: string; comment?: string; imageUrl?: string }[]) {
-  await requireRole(["ADMIN", "SDR"]);
+  const session = await requireRole(["ADMIN", "SDR"]);
   try {
+    const assignedSdrId = session.role === "SDR" ? session.userId : undefined;
     const leads = leadsData.map(data => ({
       ...data,
+      assignedSdrId: assignedSdrId,
       status: "PENDING" as LeadStatus
     }));
     
@@ -57,8 +87,15 @@ export async function bulkCreateRawLeads(leadsData: { clientName: string; client
 }
 
 export async function deleteRawLead(id: string) {
-  await requireRole(["ADMIN", "SDR"]);
+  const session = await requireRole(["ADMIN", "SDR"]);
   try {
+    const existing = await prisma.lead.findUnique({ where: { id } });
+    if (!existing) return;
+
+    if (session.role === "SDR" && existing.assignedSdrId && existing.assignedSdrId !== session.userId) {
+      throw new Error("FORBIDDEN: You cannot delete another SDR's private lead.");
+    }
+
     await prisma.lead.delete({
       where: { id }
     });
@@ -91,8 +128,31 @@ export async function updateLeadStatus(
   followUpDate?: Date | string | null, 
   followUpNote?: string | null
 ) {
-  await requireRole(["ADMIN", "SDR", "BDE"]);
+  const session = await requireRole(["ADMIN", "SDR", "BDE"]);
   try {
+    const existing = await prisma.lead.findUnique({ where: { id } });
+    if (!existing) {
+      throw new Error("Lead not found");
+    }
+
+    if (session.role === "SDR") {
+      if (existing.assignedSdrId && existing.assignedSdrId !== session.userId) {
+        throw new Error("FORBIDDEN: You are not authorized to update another SDR's assigned lead.");
+      }
+    } else if (session.role === "BDE") {
+      if (existing.source !== "BDE Field" && existing.assignedSdrId !== session.userId) {
+        throw new Error("FORBIDDEN: You are not authorized to update this lead.");
+      }
+    }
+
+    if (session.role === "SDR" && !existing.assignedSdrId) {
+      await prisma.$executeRawUnsafe(
+        `UPDATE "leads" SET "assignedSdrId" = $1 WHERE "id" = $2 AND "assignedSdrId" IS NULL`,
+        session.userId,
+        id
+      );
+    }
+
     await prisma.$executeRawUnsafe(
       `UPDATE "leads" SET "status" = $1::"LeadStatus", "updatedAt" = NOW() WHERE "id" = $2`,
       status,
@@ -137,11 +197,31 @@ export async function scheduleLeadFollowUp(
   followUpDateISO: string, 
   followUpNote?: string
 ) {
-  await requireRole(["ADMIN", "SDR", "BDE"]);
+  const session = await requireRole(["ADMIN", "SDR", "BDE"]);
   try {
     if (!id) throw new Error("Lead ID is required");
+
+    const existing = await prisma.lead.findUnique({ where: { id } });
+    if (!existing) {
+      throw new Error("Lead not found");
+    }
+
+    if (session.role === "SDR") {
+      if (existing.assignedSdrId && existing.assignedSdrId !== session.userId) {
+        throw new Error("FORBIDDEN: You cannot schedule follow-up for another SDR's lead.");
+      }
+    }
+
     const d = new Date(followUpDateISO);
     const validDate = isNaN(d.getTime()) ? new Date() : d;
+
+    if (session.role === "SDR" && !existing.assignedSdrId) {
+      await prisma.$executeRawUnsafe(
+        `UPDATE "leads" SET "assignedSdrId" = $1 WHERE "id" = $2 AND "assignedSdrId" IS NULL`,
+        session.userId,
+        id
+      );
+    }
 
     await prisma.$executeRawUnsafe(
       `UPDATE "leads" SET "status" = 'WARM_LEAD'::"LeadStatus", "followUpDate" = $1, "followUpNote" = $2, "updatedAt" = NOW() WHERE "id" = $3`,
@@ -177,7 +257,7 @@ export async function convertLeadToClient(
   billingModel: "ONE_TIME" | "RECURRING" = "ONE_TIME",
   renewalAmount: number = 0
 ) {
-  await requireRole(["ADMIN", "BDE"]);
+  const session = await requireRole(["ADMIN", "BDE", "SDR"]);
   try {
     const leads = await prisma.$queryRawUnsafe<any[]>(
       `SELECT * FROM "leads" WHERE "id" = $1`,
@@ -185,6 +265,10 @@ export async function convertLeadToClient(
     );
     const lead = leads[0];
     if (!lead) throw new Error("Lead not found");
+
+    if (session.role === "SDR" && lead.assignedSdrId && lead.assignedSdrId !== session.userId) {
+      throw new Error("FORBIDDEN: You cannot convert another SDR's lead.");
+    }
 
     // Update lead status to CONVERTED
     await prisma.$executeRawUnsafe(
@@ -214,6 +298,7 @@ export async function convertLeadToClient(
         status: "ACTIVE",
         notes: notes || lead.comment || "Converted from Sales Pipeline",
         salesCloseDate: new Date(),
+        assignedBdeId: session.role === "BDE" ? session.userId : undefined,
       } as any,
     });
 
