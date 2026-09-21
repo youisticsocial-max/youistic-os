@@ -143,6 +143,7 @@ model User {
   // Relations
   assignedClients    Client[]           @relation("AssignedBDE")
   assignedLeads      Lead[]             @relation("AssignedSDR")
+  assignedBdeLeads   Lead[]             @relation("AssignedBDELeads")
   meetings           Meeting[]          @relation("MeetingHost")
   createdMeetings    Meeting[]          @relation("MeetingCreator")
   deals              Deal[]
@@ -176,10 +177,15 @@ model Lead {
   // FK
   assignedSdrId   String?
   assignedSdr     User?       @relation("AssignedSDR", fields: [assignedSdrId], references: [id])
+
+  assignedBdeId   String?
+  assignedBde     User?       @relation("AssignedBDELeads", fields: [assignedBdeId], references: [id])
   
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
   
+  @@index([assignedSdrId])
+  @@index([assignedBdeId])
   @@map("leads")
 }
 

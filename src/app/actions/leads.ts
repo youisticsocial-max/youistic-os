@@ -24,11 +24,11 @@ export async function getLeads() {
       );
       return leads;
     } else if (session.role === "BDE") {
-      // BDE sees: BDE Field leads + leads assigned to this BDE
+      // BDE sees: leads assigned to this BDE + unassigned BDE Field shared pool leads
       const leads = await prisma.$queryRawUnsafe<any[]>(
         `SELECT * FROM "leads" 
-         WHERE "source" = 'BDE Field' 
-            OR "assignedSdrId" = $1
+         WHERE "assignedBdeId" = $1 
+            OR ("assignedBdeId" IS NULL AND "source" = 'BDE Field')
          ORDER BY "createdAt" DESC`,
         session.userId
       );
@@ -45,6 +45,7 @@ export async function createRawLead(data: { clientName: string; clientPhone?: st
   const session = await requireRole(["ADMIN", "SDR", "BDE"]);
   try {
     const assignedSdrId = session.role === "SDR" ? session.userId : undefined;
+    const assignedBdeId = session.role === "BDE" ? session.userId : undefined;
     const source = session.role === "BDE" ? (data.source || "BDE Field") : data.source;
 
     const lead = await prisma.lead.create({
@@ -52,10 +53,11 @@ export async function createRawLead(data: { clientName: string; clientPhone?: st
         ...data,
         source: source,
         assignedSdrId: assignedSdrId,
+        assignedBdeId: assignedBdeId,
         status: "PENDING"
       },
     });
-    try { revalidatePath("/dashboard/sdr"); } catch {}
+    try { revalidatePath("/dashboard/sdr"); revalidatePath("/dashboard/bde"); } catch {}
     return lead;
   } catch (error) {
     console.error("Failed to create raw lead:", error);
@@ -140,7 +142,10 @@ export async function updateLeadStatus(
         throw new Error("FORBIDDEN: You are not authorized to update another SDR's assigned lead.");
       }
     } else if (session.role === "BDE") {
-      if (existing.source !== "BDE Field" && existing.assignedSdrId !== session.userId) {
+      if (existing.assignedBdeId && existing.assignedBdeId !== session.userId) {
+        throw new Error("FORBIDDEN: You are not authorized to update another BDE's assigned lead.");
+      }
+      if (!existing.assignedBdeId && existing.source !== "BDE Field") {
         throw new Error("FORBIDDEN: You are not authorized to update this lead.");
       }
     }
@@ -148,6 +153,14 @@ export async function updateLeadStatus(
     if (session.role === "SDR" && !existing.assignedSdrId) {
       await prisma.$executeRawUnsafe(
         `UPDATE "leads" SET "assignedSdrId" = $1 WHERE "id" = $2 AND "assignedSdrId" IS NULL`,
+        session.userId,
+        id
+      );
+    }
+
+    if (session.role === "BDE" && !existing.assignedBdeId && existing.source === "BDE Field") {
+      await prisma.$executeRawUnsafe(
+        `UPDATE "leads" SET "assignedBdeId" = $1 WHERE "id" = $2 AND "assignedBdeId" IS NULL`,
         session.userId,
         id
       );
@@ -210,6 +223,13 @@ export async function scheduleLeadFollowUp(
       if (existing.assignedSdrId && existing.assignedSdrId !== session.userId) {
         throw new Error("FORBIDDEN: You cannot schedule follow-up for another SDR's lead.");
       }
+    } else if (session.role === "BDE") {
+      if (existing.assignedBdeId && existing.assignedBdeId !== session.userId) {
+        throw new Error("FORBIDDEN: You cannot schedule follow-up for another BDE's lead.");
+      }
+      if (!existing.assignedBdeId && existing.source !== "BDE Field") {
+        throw new Error("FORBIDDEN: You cannot schedule follow-up for this lead.");
+      }
     }
 
     const d = new Date(followUpDateISO);
@@ -218,6 +238,14 @@ export async function scheduleLeadFollowUp(
     if (session.role === "SDR" && !existing.assignedSdrId) {
       await prisma.$executeRawUnsafe(
         `UPDATE "leads" SET "assignedSdrId" = $1 WHERE "id" = $2 AND "assignedSdrId" IS NULL`,
+        session.userId,
+        id
+      );
+    }
+
+    if (session.role === "BDE" && !existing.assignedBdeId && existing.source === "BDE Field") {
+      await prisma.$executeRawUnsafe(
+        `UPDATE "leads" SET "assignedBdeId" = $1 WHERE "id" = $2 AND "assignedBdeId" IS NULL`,
         session.userId,
         id
       );
@@ -244,6 +272,30 @@ export async function scheduleLeadFollowUp(
   } catch (error) {
     console.error("Failed to schedule follow up:", error);
     throw new Error(`Failed to schedule follow up: ${error instanceof Error ? error.message : String(error)}`);
+  }
+}
+
+export async function assignLeadToBde(leadId: string, bdeId: string | null) {
+  const session = await requireRole(["ADMIN"]);
+  try {
+    const existing = await prisma.lead.findUnique({ where: { id: leadId } });
+    if (!existing) throw new Error("Lead not found");
+
+    const updated = await prisma.lead.update({
+      where: { id: leadId },
+      data: { assignedBdeId: bdeId || null }
+    });
+
+    try {
+      revalidatePath("/dashboard/sdr");
+      revalidatePath("/dashboard/bde");
+      revalidatePath("/dashboard/crm");
+    } catch {}
+
+    return updated;
+  } catch (error) {
+    console.error("Failed to assign lead to BDE:", error);
+    throw new Error(`Failed to assign lead to BDE: ${error instanceof Error ? error.message : String(error)}`);
   }
 }
 
@@ -274,21 +326,35 @@ export async function convertLeadToClient(
 
       if (!lead) throw new Error("Lead not found");
 
-      // 2. SDR authorization check
+      // 2. Authorization checks
       if (session.role === "SDR" && lead.assignedSdrId && lead.assignedSdrId !== session.userId) {
         throw new Error("FORBIDDEN: You cannot convert another SDR's lead.");
       }
+      if (session.role === "BDE") {
+        if (lead.assignedBdeId && lead.assignedBdeId !== session.userId) {
+          throw new Error("FORBIDDEN: You cannot convert another BDE's assigned lead.");
+        }
+        if (!lead.assignedBdeId && lead.source !== "BDE Field") {
+          throw new Error("FORBIDDEN: You are not authorized to convert this lead.");
+        }
+      }
 
-      // 3. ATOMIC CONVERSION CLAIM
-      // Attempts to lock and update status from non-CONVERTED to CONVERTED in a single atomic DB operation.
-      // If another concurrent transaction claimed it first, claimed.count will be 0.
+      // 3. Determine BDE attribution
+      // Priority 1: Persisted Lead.assignedBdeId
+      // Priority 2: If current session is BDE, current session BDE user ID
+      let finalBdeId = lead.assignedBdeId || (session.role === "BDE" ? session.userId : undefined);
+
+      // 4. ATOMIC CONVERSION CLAIM
+      // Attempts to lock and update status from non-CONVERTED to CONVERTED in a single atomic DB operation,
+      // and sets assignedBdeId to finalBdeId if claimed.
       const claimed = await tx.lead.updateMany({
         where: {
           id: leadId,
           status: { not: "CONVERTED" }
         },
         data: {
-          status: "CONVERTED"
+          status: "CONVERTED",
+          assignedBdeId: finalBdeId || undefined,
         }
       });
 
@@ -296,7 +362,7 @@ export async function convertLeadToClient(
         throw new Error("CONFLICT: Lead has already been converted to a client or is being processed.");
       }
 
-      // 4. Determine service type
+      // 5. Determine service type
       let serviceType: "FBP" | "TECH" | "HYBRID" = "FBP";
       const sUpper = (lead.service || "").toUpperCase();
       if (sUpper.includes("TECH") || sUpper.includes("WEB") || sUpper.includes("API") || sUpper.includes("DEV") || sUpper.includes("SOFTWARE") || sUpper.includes("APP")) {
@@ -305,13 +371,13 @@ export async function convertLeadToClient(
         serviceType = "HYBRID";
       }
 
-      // 5. Calculate Renewal Date if recurring
+      // 6. Calculate Renewal Date if recurring
       let calculatedRenewalDate: Date | null = null;
       if (billingModel === "RECURRING" && renewalAmount > 0) {
         calculatedRenewalDate = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000);
       }
 
-      // 6. Create Client record (happens AFTER successful atomic claim)
+      // 7. Create Client record (carrying persistent BDE attribution)
       const createdClient = await tx.client.create({
         data: {
           companyName: lead.businessName || lead.clientName || "Unnamed Company",
@@ -326,11 +392,11 @@ export async function convertLeadToClient(
           status: "ACTIVE",
           notes: notes || lead.comment || "Converted from Sales Pipeline",
           salesCloseDate: new Date(),
-          assignedBdeId: session.role === "BDE" ? session.userId : undefined,
+          assignedBdeId: finalBdeId || undefined,
         },
       });
 
-      // 7. Create Project record
+      // 8. Create Project record
       const projTitle = projectName || `${createdClient.companyName} - ${serviceType} Execution`;
       const projType = serviceType === "TECH" ? "TECH" : serviceType === "HYBRID" ? "HYBRID" : "FBP";
       const projDeadline = deadline ? new Date(deadline) : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
@@ -348,7 +414,7 @@ export async function convertLeadToClient(
         },
       });
 
-      // 8. Create Revenue Entry ONLY when advanceAmount > 0
+      // 9. Create Revenue Entry ONLY when advanceAmount > 0
       if (advanceAmount > 0) {
         await tx.revenueEntry.create({
           data: {
