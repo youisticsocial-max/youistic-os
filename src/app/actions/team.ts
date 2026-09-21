@@ -34,6 +34,7 @@ export async function getTeamMembers() {
       include: {
         assignedLeads: true,
         meetings: true,
+        assignedClients: true,
       },
       orderBy: { createdAt: "asc" },
     });
@@ -58,6 +59,7 @@ export async function getTeamMembers() {
         include: {
           assignedLeads: true,
           meetings: true,
+          assignedClients: true,
         },
         orderBy: { createdAt: "asc" },
       });
@@ -70,12 +72,14 @@ export async function getTeamMembers() {
     return users.map((u) => {
       const sdrLeads = u.assignedLeads || [];
       const bdeMeetings = u.meetings || [];
+      const bdeClients = u.assignedClients || [];
       const totalLeads = sdrLeads.length;
       const convertedCount = sdrLeads.filter((l: any) => l.status === "CONVERTED").length;
 
       let activityLabel = "Active Member";
-      let revenue = convertedCount * 45000;
-      let closingRatio = totalLeads > 0 ? Math.round((convertedCount / totalLeads) * 100) : 0;
+      // Calculate real factual revenue generated from assigned clients' contract values
+      const revenue = bdeClients.reduce((sum: number, c: any) => sum + (c.contractValue || 0), 0);
+      const closingRatio = totalLeads > 0 ? Math.round((convertedCount / totalLeads) * 100) : 0;
 
       if (u.role === UserRole.ADMIN) {
         activityLabel = `📄 ${convertedCount} Proposals Approved`;
@@ -185,14 +189,20 @@ function fallbackTeamMembers() {
 
 export async function createTeamMember(data: { name: string; email: string; role: UserRole; department?: string; phone?: string }) {
   await requireRole(["ADMIN"]);
+  if (!data.name || typeof data.name !== "string" || !data.name.trim()) {
+    throw new Error("INVALID_INPUT: Team member name is required.");
+  }
+  if (!data.email || typeof data.email !== "string" || !data.email.includes("@")) {
+    throw new Error("INVALID_INPUT: Valid email address is required.");
+  }
   try {
     const newUser = await prisma.user.create({
       data: {
-        name: data.name,
-        email: data.email,
+        name: data.name.trim(),
+        email: data.email.toLowerCase().trim(),
         role: data.role,
         department: data.department || data.role,
-        phone: data.phone,
+        phone: data.phone || null,
       },
     });
     return newUser;
