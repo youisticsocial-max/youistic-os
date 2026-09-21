@@ -393,6 +393,7 @@ export async function convertLeadToClient(
           notes: notes || lead.comment || "Converted from Sales Pipeline",
           salesCloseDate: new Date(),
           assignedBdeId: finalBdeId || undefined,
+          originLeadId: lead.id,
         },
       });
 

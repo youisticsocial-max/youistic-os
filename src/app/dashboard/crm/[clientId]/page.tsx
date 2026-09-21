@@ -408,24 +408,42 @@ export default function Client360Page({ params }: Client360PageProps) {
                 </p>
               </div>
 
-              {/* Sales Origin & Attribution Traceability Audit Card */}
-              <div className="bg-[#111420] border border-slate-800 rounded-2xl p-6 space-y-3">
+              {/* Sales Origin & Attribution Card */}
+              <div className="bg-[#111420] border border-slate-800 rounded-2xl p-6 space-y-4">
                 <h3 className="text-sm font-bold text-slate-200 flex items-center gap-2">
                   <ShieldCheck size={16} className="text-teal-400" />
-                  Sales Attribution & Lead Origin Traceability
+                  Sales Origin & Attribution
                 </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-                  <div className="bg-slate-900/60 p-3 rounded-xl border border-slate-800">
-                    <span className="text-slate-400 block mb-1">Persisted Assigned BDE:</span>
-                    <strong className="text-slate-100">{client.assignedBde?.name || "Unassigned"}</strong>
+
+                {client.originLead ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                    <div className="bg-slate-900/60 p-3 rounded-xl border border-slate-800">
+                      <span className="text-slate-400 block mb-1">Lead Source:</span>
+                      <strong className="text-slate-100">{client.originLead.source || "Direct / Unknown"}</strong>
+                    </div>
+                    <div className="bg-slate-900/60 p-3 rounded-xl border border-slate-800">
+                      <span className="text-slate-400 block mb-1">Original Lead SDR:</span>
+                      <strong className="text-slate-100">{client.originLead.assignedSdr?.name || "Unassigned"}</strong>
+                    </div>
+                    <div className="bg-slate-900/60 p-3 rounded-xl border border-slate-800">
+                      <span className="text-slate-400 block mb-1">Original Lead BDE:</span>
+                      <strong className="text-slate-100">{client.originLead.assignedBde?.name || "Unassigned"}</strong>
+                    </div>
+                    <div className="bg-slate-900/60 p-3 rounded-xl border border-slate-800">
+                      <span className="text-slate-400 block mb-1">Lead Creation Date:</span>
+                      <strong className="text-slate-100">{client.originLead.createdAt ? formatDate(client.originLead.createdAt) : "Not set"}</strong>
+                    </div>
                   </div>
-                  <div className="bg-slate-900/60 p-3 rounded-xl border border-slate-800">
-                    <span className="text-slate-400 block mb-1">Original SDR Attribution:</span>
-                    <span className="text-slate-300">Retained on historical Lead record</span>
+                ) : (
+                  <div className="bg-slate-900/60 p-4 rounded-xl border border-slate-800 text-center">
+                    <span className="text-xs text-slate-400 font-medium">Original lead not linked</span>
+                    <p className="text-[11px] text-slate-500 mt-1">Historical client converted before lead-origin traceability was introduced.</p>
                   </div>
-                </div>
-                <div className="text-[11px] text-slate-500 bg-slate-950/80 p-3 rounded-lg border border-slate-900 font-mono">
-                  CLIENT → ORIGINAL LEAD TRACEABILITY: NOT RELIABLE (Direct leadId FK missing on Client schema)
+                )}
+
+                <div className="bg-slate-950/60 p-3 rounded-xl border border-slate-900/80 text-xs">
+                  <span className="text-slate-400 block mb-1">Current Account BDE (Ownership):</span>
+                  <strong className="text-emerald-400">{client.assignedBde?.name || "Unassigned BDE"}</strong>
                 </div>
               </div>
             </div>

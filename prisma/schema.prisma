@@ -180,6 +180,8 @@ model Lead {
 
   assignedBdeId   String?
   assignedBde     User?       @relation("AssignedBDELeads", fields: [assignedBdeId], references: [id])
+
+  convertedClient Client?     @relation("OriginLeadClient")
   
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
@@ -242,6 +244,9 @@ model Client {
   // FK
   assignedBdeId   String?
   assignedBde     User?        @relation("AssignedBDE", fields: [assignedBdeId], references: [id])
+
+  originLeadId    String?      @unique
+  originLead      Lead?        @relation("OriginLeadClient", fields: [originLeadId], references: [id])
 
   createdAt       DateTime     @default(now())
   updatedAt       DateTime     @updatedAt

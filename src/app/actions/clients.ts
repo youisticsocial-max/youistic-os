@@ -40,6 +40,12 @@ export async function getClientById(clientId: string) {
       where: { id: clientId },
       include: {
         assignedBde: { select: { id: true, name: true, email: true } },
+        originLead: {
+          include: {
+            assignedSdr: { select: { id: true, name: true, email: true } },
+            assignedBde: { select: { id: true, name: true, email: true } },
+          }
+        },
         projects: { orderBy: { createdAt: "desc" } },
         revenueEntries: { orderBy: { paymentDate: "desc" } },
         supportTickets: { orderBy: { createdAt: "desc" } },
@@ -48,7 +54,7 @@ export async function getClientById(clientId: string) {
 
     if (!client) return null;
 
-    if (session.role === "BDE" && client.assignedBdeId && client.assignedBdeId !== session.userId) {
+    if (session.role === "BDE" && client.assignedBdeId !== session.userId) {
       throw new Error("FORBIDDEN: You are not authorized to view another BDE's client.");
     }
 
@@ -172,6 +178,8 @@ export async function createClient(data: {
   }
 }
 
+const VALID_STATUSES = ["ONBOARDING", "ACTIVE", "RENEWAL_DUE", "CHURNED"];
+
 export async function updateClient(
   id: string,
   data: {
@@ -189,11 +197,34 @@ export async function updateClient(
 ) {
   const session = await requireRole(["ADMIN", "BDE"]);
   try {
+    if (data.status !== undefined && !VALID_STATUSES.includes(data.status)) {
+      throw new Error("INVALID_INPUT: Invalid client status.");
+    }
+
     const existing = await prisma.client.findUnique({ where: { id } });
     if (!existing) throw new Error("Client not found");
 
-    if (session.role === "BDE" && existing.assignedBdeId && existing.assignedBdeId !== session.userId) {
+    if (session.role === "BDE" && existing.assignedBdeId !== session.userId) {
       throw new Error("FORBIDDEN: You cannot edit another BDE's client.");
+    }
+
+    if (data.assignedBdeId !== undefined && session.role !== "ADMIN") {
+      throw new Error("FORBIDDEN: Only ADMIN can reassign client BDE.");
+    }
+
+    let targetBdeId: string | null | undefined = undefined;
+    if (data.assignedBdeId !== undefined && session.role === "ADMIN") {
+      if (data.assignedBdeId) {
+        const targetBde = await prisma.user.findFirst({
+          where: { id: data.assignedBdeId, role: "BDE", isActive: true }
+        });
+        if (!targetBde) {
+          throw new Error("INVALID_INPUT: Target user must be an active BDE.");
+        }
+        targetBdeId = data.assignedBdeId;
+      } else {
+        targetBdeId = null;
+      }
     }
 
     const updated = await prisma.client.update({
@@ -206,7 +237,7 @@ export async function updateClient(
         ...(data.notes !== undefined && { notes: data.notes || null }),
         ...(data.industry !== undefined && { industry: data.industry || null }),
         ...(data.website !== undefined && { website: data.website || null }),
-        ...(data.assignedBdeId !== undefined && session.role === "ADMIN" && { assignedBdeId: data.assignedBdeId || null }),
+        ...(targetBdeId !== undefined && { assignedBdeId: targetBdeId }),
         ...(data.renewalDate !== undefined && { renewalDate: data.renewalDate ? new Date(data.renewalDate) : null }),
         ...(data.renewalAmount !== undefined && { renewalAmount: data.renewalAmount }),
       }
