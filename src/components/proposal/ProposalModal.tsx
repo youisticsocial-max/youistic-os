@@ -21,6 +21,7 @@ import {
   Loader2
 } from "lucide-react";
 import { updateLeadStatus } from "@/app/actions/leads";
+import { createProposal } from "@/app/actions/proposals";
 
 interface LeadData {
   id: string;
@@ -249,8 +250,20 @@ export default function ProposalModal({ isOpen, onClose, lead, onSuccess }: Prop
     }
     setIsSubmitting(true);
     try {
-      // Update lead status to PROPOSAL_SENT
-      await updateLeadStatus(lead.id, "PROPOSAL_SENT");
+      const parsedValidity = parseInt(validityDays.replace(/\D/g, "") || "15", 10);
+      await createProposal({
+        leadId: lead.id,
+        title: proposalTitle || "Commercial Proposal",
+        packageType: packageType,
+        deliverables: deliverables,
+        grossAmount: numericTotal,
+        discountAmount: numericDiscount,
+        validityDays: isNaN(parsedValidity) || parsedValidity <= 0 ? 15 : parsedValidity,
+        paymentTerms: paymentTerms,
+        specialTerms: specialTerms,
+        status: "SENT",
+      });
+
       setProposalSuccess(true);
 
       if (sendViaWhatsApp) {
@@ -265,11 +278,12 @@ export default function ProposalModal({ isOpen, onClose, lead, onSuccess }: Prop
       setTimeout(() => {
         onClose();
       }, 1500);
-    } catch (error) {
-      console.error(error);
-      alert("Failed to update proposal status.");
+    } catch (error: any) {
+      console.error("Failed to save and send proposal:", error);
+      alert("Failed to persist proposal: " + (error?.message || "Unknown error"));
+    } finally {
+      setIsSubmitting(false);
     }
-    setIsSubmitting(false);
   };
 
   return (

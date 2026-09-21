@@ -20,6 +20,7 @@ import {
   Loader2
 } from "lucide-react";
 import { updateLeadStatus } from "@/app/actions/leads";
+import { createProposal } from "@/app/actions/proposals";
 
 interface LeadData {
   id: string;
@@ -205,6 +206,20 @@ export default function NegotiationModal({
     }
     setIsSubmitting(true);
     try {
+      const parsedValidity = parseInt(validityDays.replace(/\D/g, "") || "15", 10);
+      await createProposal({
+        leadId: lead.id,
+        title: proposalTitle || "Revised Commercial Offer",
+        packageType: packageType,
+        deliverables: deliverables,
+        grossAmount: numericTotal,
+        discountAmount: numericDiscount,
+        validityDays: isNaN(parsedValidity) || parsedValidity <= 0 ? 15 : parsedValidity,
+        paymentTerms: paymentTerms,
+        specialTerms: specialTerms,
+        status: "SENT",
+      });
+
       const formattedNote = `[NEGOTIATED REVISED OFFER]\nNet Amount: ₹${netAmount.toLocaleString("en-IN")} (Discount: ₹${numericDiscount.toLocaleString("en-IN")})\nTerms: ${specialTerms}`;
 
       // Update lead status to NEGOTIATION

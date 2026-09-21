@@ -23,6 +23,14 @@ enum UserRole {
   VIEWER
 }
 
+enum ProposalStatus {
+  DRAFT
+  SENT
+  ACCEPTED
+  DECLINED
+  SUPERSEDED
+}
+
 enum ServiceType {
   FBP
   TECH
@@ -151,6 +159,7 @@ model User {
   assignedTickets    SupportTicket[]
   dailyReports       DailyReport[]
   performanceMetrics PerformanceMetric[]
+  createdProposals   Proposal[]         @relation("ProposalCreator")
 
   @@map("users")
 }
@@ -182,6 +191,7 @@ model Lead {
   assignedBde     User?       @relation("AssignedBDELeads", fields: [assignedBdeId], references: [id])
 
   convertedClient Client?     @relation("OriginLeadClient")
+  proposals       Proposal[]
   
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
@@ -466,3 +476,39 @@ model PerformanceMetric {
   @@unique([userId, periodMonth])
   @@map("performance_metrics")
 }
+
+// ─────────────────────────────────────────────
+// CRM: PROPOSALS / COMMERCIAL OFFERS
+// ─────────────────────────────────────────────
+
+model Proposal {
+  id             String         @id @default(cuid())
+  title          String
+  packageType    String?
+  deliverables   String?        @db.Text
+  grossAmount    Float          @default(0)
+  discountAmount Float          @default(0)
+  finalAmount    Float          @default(0)
+  validityDays   Int            @default(15)
+  paymentTerms   String?        @db.Text
+  specialTerms   String?        @db.Text
+  status         ProposalStatus @default(DRAFT)
+  sentAt         DateTime?
+
+  // FKs
+  leadId         String
+  lead           Lead           @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  createdById    String
+  createdBy      User           @relation("ProposalCreator", fields: [createdById], references: [id])
+
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  @@index([leadId])
+  @@index([createdById])
+  @@index([status])
+  @@index([createdAt])
+  @@map("proposals")
+}
+
