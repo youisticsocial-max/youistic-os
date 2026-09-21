@@ -11,7 +11,29 @@ export async function getTickets(filterName?: string) {
     const userRole = session.role;
     const loggedInName = session.name;
 
-    let dbTickets = await prisma.supportTicket.findMany({
+    const isCeoOrAdmin = userRole === "ADMIN" || loggedInName === "CEO";
+
+    let whereClause: any = {};
+    if (!isCeoOrAdmin) {
+      whereClause = {
+        OR: [
+          { createdByName: { contains: loggedInName, mode: "insensitive" } },
+          { assignedTo: { name: { contains: loggedInName, mode: "insensitive" } } },
+          ...(session.role === "BDE" ? [{ client: { assignedBdeId: session.userId } }] : []),
+          ...(session.role === "SDR" ? [{ client: { lead: { assignedSdrId: session.userId } } }] : []),
+        ],
+      };
+    } else if (filterName && filterName !== "ALL") {
+      whereClause = {
+        OR: [
+          { createdByName: { contains: filterName, mode: "insensitive" } },
+          { assignedTo: { name: { contains: filterName, mode: "insensitive" } } },
+        ],
+      };
+    }
+
+    const dbTickets = await prisma.supportTicket.findMany({
+      where: whereClause,
       include: {
         client: true,
         assignedTo: true,
@@ -19,24 +41,11 @@ export async function getTickets(filterName?: string) {
       orderBy: { createdAt: "desc" },
     });
 
-    const isCeoOrAdmin = userRole === "ADMIN" || loggedInName === "CEO";
-    const targetScope = isCeoOrAdmin ? (filterName || "ALL") : loggedInName;
-
-    const filtered = dbTickets.filter((t) => {
-      if (targetScope === "ALL") return true;
-
-      const raisedBy = (t.createdByName || "").toLowerCase();
-      const assignedTo = (t.assignedTo?.name || "").toLowerCase();
-      const scope = targetScope.toLowerCase();
-
-      return raisedBy.includes(scope) || scope.includes(raisedBy) || assignedTo.includes(scope);
-    });
-
     return {
       userRole,
       loggedInName,
       isCeo: isCeoOrAdmin,
-      tickets: filtered.map((t) => ({
+      tickets: dbTickets.map((t) => ({
         id: t.id,
         title: t.title,
         description: t.description,
@@ -71,6 +80,13 @@ export async function createTicket(data: {
   createdByName?: string;
 }) {
   const session = await requireRole(["ADMIN", "SDR", "BDE", "SUPPORT"]);
+  if (!data.title || typeof data.title !== "string" || !data.title.trim()) {
+    throw new Error("INVALID_INPUT: Ticket title is required.");
+  }
+  if (!data.clientName || typeof data.clientName !== "string" || !data.clientName.trim()) {
+    throw new Error("INVALID_INPUT: Client name is required.");
+  }
+
   try {
     let currentUserName = data.createdByName || session.name;
 
@@ -84,10 +100,10 @@ export async function createTicket(data: {
 
     const newTicket = await prisma.supportTicket.create({
       data: {
-        title: data.title,
-        clientName: data.clientName,
+        title: data.title.trim(),
+        clientName: data.clientName.trim(),
         description: data.description || null,
-        priority: data.priority,
+        priority: data.priority || TicketPriority.MEDIUM,
         status: TicketStatus.OPEN,
         createdByName: currentUserName,
         tags: data.tags && data.tags.length > 0 ? data.tags : ["Support", "Tech"],
@@ -109,6 +125,9 @@ export async function createTicket(data: {
 
 export async function updateTicketStatus(ticketId: string, status: TicketStatus) {
   await requireRole(["ADMIN", "SDR", "BDE", "SUPPORT"]);
+  if (!ticketId || typeof ticketId !== "string") {
+    throw new Error("INVALID_INPUT: Valid ticketId is required.");
+  }
   try {
     const updated = await prisma.supportTicket.update({
       where: { id: ticketId },
@@ -117,6 +136,9 @@ export async function updateTicketStatus(ticketId: string, status: TicketStatus)
         resolvedAt: status === TicketStatus.RESOLVED || status === TicketStatus.CLOSED ? new Date() : null,
       },
     });
+    try {
+      revalidatePath("/dashboard/crm/tickets");
+    } catch {}
     return updated;
   } catch (error) {
     console.error("Error updating ticket status:", error);
@@ -126,6 +148,9 @@ export async function updateTicketStatus(ticketId: string, status: TicketStatus)
 
 export async function deleteTicket(ticketId: string) {
   await requireRole(["ADMIN", "SUPPORT"]);
+  if (!ticketId || typeof ticketId !== "string") {
+    throw new Error("INVALID_INPUT: Valid ticketId is required.");
+  }
   try {
     await prisma.ticketComment.deleteMany({ where: { ticketId } });
     await prisma.supportTicket.delete({ where: { id: ticketId } });
