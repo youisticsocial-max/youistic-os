@@ -86,19 +86,26 @@ export async function getClientById(clientId: string) {
 
 export async function deleteClient(id: string) {
   await requireRole(["ADMIN"]);
+  if (!id || typeof id !== "string") {
+    throw new Error("INVALID_INPUT: Valid client id is required.");
+  }
   try {
-    await prisma.revenueEntry.deleteMany({ where: { clientId: id } });
-    await prisma.task.deleteMany({ where: { project: { clientId: id } } });
-    await prisma.project.deleteMany({ where: { clientId: id } });
-    await prisma.ticketComment.deleteMany({ where: { ticket: { clientId: id } } });
-    await prisma.supportTicket.deleteMany({ where: { clientId: id } });
-    await prisma.client.delete({ where: { id } });
+    // Atomic transactional deletion across all dependent relations
+    await prisma.$transaction([
+      prisma.revenueEntry.deleteMany({ where: { clientId: id } }),
+      prisma.task.deleteMany({ where: { project: { clientId: id } } }),
+      prisma.project.deleteMany({ where: { clientId: id } }),
+      prisma.ticketComment.deleteMany({ where: { ticket: { clientId: id } } }),
+      prisma.supportTicket.deleteMany({ where: { clientId: id } }),
+      prisma.client.delete({ where: { id } }),
+    ]);
     try {
       revalidatePath("/dashboard/crm");
     } catch {}
     return { success: true };
   } catch (error) {
-    console.error("Failed to delete client:", error);
+    console.error("Failed to delete client with Prisma transaction:", error);
+    // Safe legacy fallback if relations or schema drift prevent direct Prisma deletion
     try {
       await prisma.$executeRawUnsafe(`DELETE FROM "revenue_entries" WHERE "clientId" = $1`, id).catch(() => {});
       await prisma.$executeRawUnsafe(`DELETE FROM "projects" WHERE "clientId" = $1`, id).catch(() => {});
