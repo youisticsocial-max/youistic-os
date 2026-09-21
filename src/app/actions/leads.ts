@@ -9,29 +9,42 @@ export async function getLeads() {
   const session = await requireRole(["ADMIN", "SDR", "BDE"]);
   try {
     if (session.role === "ADMIN") {
-      const leads = await prisma.$queryRawUnsafe<any[]>(
-        `SELECT * FROM "leads" ORDER BY "createdAt" DESC`
-      );
+      const leads = await prisma.lead.findMany({
+        orderBy: { createdAt: "desc" },
+      });
       return leads;
     } else if (session.role === "SDR") {
       // SDR sees: own assigned leads + Shared Pool unassigned leads (excluding BDE field leads)
-      const leads = await prisma.$queryRawUnsafe<any[]>(
-        `SELECT * FROM "leads" 
-         WHERE "assignedSdrId" = $1 
-            OR ("assignedSdrId" IS NULL AND ("source" IS NULL OR "source" != 'BDE Field'))
-         ORDER BY "createdAt" DESC`,
-        session.userId
-      );
+      const leads = await prisma.lead.findMany({
+        where: {
+          OR: [
+            { assignedSdrId: session.userId },
+            {
+              assignedSdrId: null,
+              OR: [
+                { source: null },
+                { source: { not: "BDE Field" } },
+              ],
+            },
+          ],
+        },
+        orderBy: { createdAt: "desc" },
+      });
       return leads;
     } else if (session.role === "BDE") {
       // BDE sees: leads assigned to this BDE + unassigned BDE Field shared pool leads
-      const leads = await prisma.$queryRawUnsafe<any[]>(
-        `SELECT * FROM "leads" 
-         WHERE "assignedBdeId" = $1 
-            OR ("assignedBdeId" IS NULL AND "source" = 'BDE Field')
-         ORDER BY "createdAt" DESC`,
-        session.userId
-      );
+      const leads = await prisma.lead.findMany({
+        where: {
+          OR: [
+            { assignedBdeId: session.userId },
+            {
+              assignedBdeId: null,
+              source: "BDE Field",
+            },
+          ],
+        },
+        orderBy: { createdAt: "desc" },
+      });
       return leads;
     }
     return [];
@@ -150,55 +163,42 @@ export async function updateLeadStatus(
       }
     }
 
+    // Determine auto-assignment when claiming an unassigned lead
+    let autoAssignedSdrId = undefined;
     if (session.role === "SDR" && !existing.assignedSdrId) {
-      await prisma.$executeRawUnsafe(
-        `UPDATE "leads" SET "assignedSdrId" = $1 WHERE "id" = $2 AND "assignedSdrId" IS NULL`,
-        session.userId,
-        id
-      );
+      autoAssignedSdrId = session.userId;
     }
 
+    let autoAssignedBdeId = undefined;
     if (session.role === "BDE" && !existing.assignedBdeId && existing.source === "BDE Field") {
-      await prisma.$executeRawUnsafe(
-        `UPDATE "leads" SET "assignedBdeId" = $1 WHERE "id" = $2 AND "assignedBdeId" IS NULL`,
-        session.userId,
-        id
-      );
+      autoAssignedBdeId = session.userId;
     }
 
-    await prisma.$executeRawUnsafe(
-      `UPDATE "leads" SET "status" = $1::"LeadStatus", "updatedAt" = NOW() WHERE "id" = $2`,
-      status,
-      id
-    );
+    const updateData: any = {
+      status: status as LeadStatus,
+      ...(autoAssignedSdrId && { assignedSdrId: autoAssignedSdrId }),
+      ...(autoAssignedBdeId && { assignedBdeId: autoAssignedBdeId }),
+    };
 
     if (followUpDate !== undefined) {
-      const d = followUpDate ? new Date(followUpDate) : null;
-      await prisma.$executeRawUnsafe(
-        `UPDATE "leads" SET "followUpDate" = $1 WHERE "id" = $2`,
-        d,
-        id
-      );
+      updateData.followUpDate = followUpDate ? new Date(followUpDate) : null;
     }
     if (followUpNote !== undefined) {
-      await prisma.$executeRawUnsafe(
-        `UPDATE "leads" SET "followUpNote" = $1 WHERE "id" = $2`,
-        followUpNote || null,
-        id
-      );
+      updateData.followUpNote = followUpNote || null;
     }
 
-    const leads = await prisma.$queryRawUnsafe<any[]>(
-      `SELECT * FROM "leads" WHERE "id" = $1`,
-      id
-    );
+    const updatedLead = await prisma.lead.update({
+      where: { id },
+      data: updateData,
+    });
+
     try {
       revalidatePath("/dashboard/sdr");
       revalidatePath("/dashboard/sdr/pipeline");
       revalidatePath("/dashboard/bde");
       revalidatePath("/dashboard/bde/pipeline");
     } catch {}
-    return leads[0] || null;
+    return updatedLead;
   } catch (error) {
     console.error("Failed to update lead status:", error);
     throw new Error(`Failed to update lead status: ${error instanceof Error ? error.message : String(error)}`);
@@ -235,40 +235,34 @@ export async function scheduleLeadFollowUp(
     const d = new Date(followUpDateISO);
     const validDate = isNaN(d.getTime()) ? new Date() : d;
 
+    let autoAssignedSdrId = undefined;
     if (session.role === "SDR" && !existing.assignedSdrId) {
-      await prisma.$executeRawUnsafe(
-        `UPDATE "leads" SET "assignedSdrId" = $1 WHERE "id" = $2 AND "assignedSdrId" IS NULL`,
-        session.userId,
-        id
-      );
+      autoAssignedSdrId = session.userId;
     }
 
+    let autoAssignedBdeId = undefined;
     if (session.role === "BDE" && !existing.assignedBdeId && existing.source === "BDE Field") {
-      await prisma.$executeRawUnsafe(
-        `UPDATE "leads" SET "assignedBdeId" = $1 WHERE "id" = $2 AND "assignedBdeId" IS NULL`,
-        session.userId,
-        id
-      );
+      autoAssignedBdeId = session.userId;
     }
 
-    await prisma.$executeRawUnsafe(
-      `UPDATE "leads" SET "status" = 'WARM_LEAD'::"LeadStatus", "followUpDate" = $1, "followUpNote" = $2, "updatedAt" = NOW() WHERE "id" = $3`,
-      validDate,
-      followUpNote || null,
-      id
-    );
+    const updatedLead = await prisma.lead.update({
+      where: { id },
+      data: {
+        status: "WARM_LEAD" as LeadStatus,
+        followUpDate: validDate,
+        followUpNote: followUpNote || null,
+        ...(autoAssignedSdrId && { assignedSdrId: autoAssignedSdrId }),
+        ...(autoAssignedBdeId && { assignedBdeId: autoAssignedBdeId }),
+      },
+    });
 
-    const leads = await prisma.$queryRawUnsafe<any[]>(
-      `SELECT * FROM "leads" WHERE "id" = $1`,
-      id
-    );
     try {
       revalidatePath("/dashboard/sdr");
       revalidatePath("/dashboard/sdr/pipeline");
       revalidatePath("/dashboard/bde");
       revalidatePath("/dashboard/bde/pipeline");
     } catch {}
-    return leads[0] || null;
+    return updatedLead;
   } catch (error) {
     console.error("Failed to schedule follow up:", error);
     throw new Error(`Failed to schedule follow up: ${error instanceof Error ? error.message : String(error)}`);
