@@ -144,6 +144,7 @@ model User {
   assignedClients    Client[]           @relation("AssignedBDE")
   assignedLeads      Lead[]             @relation("AssignedSDR")
   meetings           Meeting[]          @relation("MeetingHost")
+  createdMeetings    Meeting[]          @relation("MeetingCreator")
   deals              Deal[]
   assignedTasks      Task[]
   assignedTickets    SupportTicket[]
@@ -196,6 +197,10 @@ model Meeting {
   // Who is hosting/attending (CEO, BDE)
   hostId        String
   host          User          @relation("MeetingHost", fields: [hostId], references: [id])
+  
+  // Who created the meeting (SDR, BDE, ADMIN)
+  createdById   String?
+  createdBy     User?         @relation("MeetingCreator", fields: [createdById], references: [id])
   
   // Associated Lead or Client
   leadId        String?

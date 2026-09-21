@@ -201,3 +201,25 @@ export async function createTeamMember(data: { name: string; email: string; role
     throw error;
   }
 }
+
+export async function getBdeUsers() {
+  await requireRole(["ADMIN", "BDE", "SDR"]);
+  try {
+    return await prisma.user.findMany({
+      where: {
+        role: UserRole.BDE,
+        isActive: true,
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+      },
+      orderBy: { name: "asc" },
+    });
+  } catch (error) {
+    console.error("Error fetching BDE users:", error);
+    return [];
+  }
+}

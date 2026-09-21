@@ -7,6 +7,7 @@ import { Plus, Search, Filter, Phone, Mail, MoreHorizontal, Calendar, X, Trash2,
 import { format, isToday, isPast } from "date-fns";
 import { getLeads, updateLeadStatus, createRawLead, deleteRawLead, bulkCreateRawLeads, scheduleLeadFollowUp } from "@/app/actions/leads";
 import { createMeeting } from "@/app/actions/meetings";
+import { getBdeUsers } from "@/app/actions/team";
 import { Upload } from "lucide-react";
 import type { Lead, LeadStatus } from "@prisma/client";
 
@@ -90,6 +91,7 @@ export default function SDRDashboard() {
 
   // Form states
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [bdeUsers, setBdeUsers] = useState<{ id: string; name: string; email: string }[]>([]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -103,6 +105,7 @@ export default function SDRDashboard() {
 
   useEffect(() => {
     fetchLeads();
+    getBdeUsers().then(setBdeUsers).catch(console.error);
   }, []);
 
   const fetchLeads = () => {
@@ -367,12 +370,15 @@ export default function SDRDashboard() {
     setIsSubmitting(true);
     const formData = new FormData(e.currentTarget);
     try {
+      const bdeHostId = formData.get("bdeHostId") as string;
+      const assignedRole = (formData.get("assignedRole") as any) || "BDE";
       await createMeeting({
         title: formData.get("title") as string,
         meetingDate: new Date(formData.get("meetingDate") as string),
         notes: formData.get("notes") as string,
         leadId: selectedLeadId || undefined,
-        assignedRole: (formData.get("assignedRole") as any) || "BDE",
+        assignedRole: assignedRole,
+        hostId: bdeHostId || undefined,
       });
       setIsMeetingModalOpen(false);
       setSelectedLeadId(null);
@@ -1449,12 +1455,22 @@ export default function SDRDashboard() {
             
             <form onSubmit={handleScheduleMeeting} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '6px' }}>Assign Call / Meeting To *</label>
-                <select name="assignedRole" defaultValue="BDE" required style={{ width: '100%', backgroundColor: 'var(--bg-input)', border: '1px solid var(--bg-border)', borderRadius: '10px', padding: '10px 12px', fontSize: '13px', color: 'var(--text-primary)', outline: 'none', cursor: 'pointer' }}>
-                  <option value="BDE">BDE Team (Business Development Executive)</option>
-                  <option value="CEO">CEO (Executive Escalation & Closing)</option>
-                  <option value="SDR">SDR Team (Sales Development Rep)</option>
-                </select>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '6px' }}>Assign Meeting Host (BDE) *</label>
+                {bdeUsers.length > 0 ? (
+                  <select name="bdeHostId" required style={{ width: '100%', backgroundColor: 'var(--bg-input)', border: '1px solid var(--bg-border)', borderRadius: '10px', padding: '10px 12px', fontSize: '13px', color: 'var(--text-primary)', outline: 'none', cursor: 'pointer' }}>
+                    {bdeUsers.map((bde) => (
+                      <option key={bde.id} value={bde.id}>
+                        {bde.name} ({bde.email})
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <select name="assignedRole" defaultValue="BDE" required style={{ width: '100%', backgroundColor: 'var(--bg-input)', border: '1px solid var(--bg-border)', borderRadius: '10px', padding: '10px 12px', fontSize: '13px', color: 'var(--text-primary)', outline: 'none', cursor: 'pointer' }}>
+                    <option value="BDE">BDE Team (Business Development Executive)</option>
+                    <option value="CEO">CEO (Executive Escalation & Closing)</option>
+                    <option value="SDR">SDR Team (Sales Development Rep)</option>
+                  </select>
+                )}
               </div>
 
               <div>
