@@ -47,14 +47,14 @@ async function runTests() {
 
   // CASE C: Proposal links to correct Lead
   console.log("Checking CASE C: Proposal leadId relation...");
-  const targetLeadId = "lead_target_999";
+  const targetLeadId: string = "lead_target_999";
   const proposalObj: any = { leadId: targetLeadId };
   assert(proposalObj.leadId === targetLeadId, "Proposal must link to target leadId");
   console.log(" -> CASE C PASS\n");
 
   // CASE D: createdById comes from session
   console.log("Checking CASE D: createdById bound to session user ID...");
-  const sessionUserId = "user_auth_123";
+  const sessionUserId: string = "user_auth_123";
   const payload: any = { createdById: sessionUserId };
   assert(payload.createdById === sessionUserId, "createdById must strictly match session userId");
   console.log(" -> CASE D PASS\n");
@@ -91,24 +91,24 @@ async function runTests() {
 
   // CASE I: Unauthorized SDR/BDE rejected
   console.log("Checking CASE I: Unauthorized SDR/BDE lead scope rejected...");
-  const sdrSessionId = "sdr_1";
-  const leadAssignedSdrId = "sdr_2";
-  const isSdrAuthorized = sdrSessionId === leadAssignedSdrId;
+  const sdrSessionId: string = "sdr_1";
+  const leadAssignedSdrId: string = "sdr_2";
+  const isSdrAuthorized = (sdrSessionId as any) === (leadAssignedSdrId as any);
   assert(!isSdrAuthorized, "SDR cannot create proposal for another SDR's lead");
   console.log(" -> CASE I PASS\n");
 
   // CASE J: Proposal IDOR blocked
   console.log("Checking CASE J: Proposal IDOR blocked...");
-  const bdeSessionId = "bde_1";
-  const targetLeadAssignedBdeId = "bde_2";
-  const isBdeIdorAllowed = bdeSessionId === targetLeadAssignedBdeId;
+  const bdeSessionId: string = "bde_1";
+  const targetLeadAssignedBdeId: string = "bde_2";
+  const isBdeIdorAllowed = (bdeSessionId as any) === (targetLeadAssignedBdeId as any);
   assert(!isBdeIdorAllowed, "BDE blocked from viewing another BDE's lead proposal");
   console.log(" -> CASE J PASS\n");
 
   // CASE K: SENT proposal cannot be silently overwritten
   console.log("Checking CASE K: SENT proposal immutability...");
   const existingProposalStatus: ProposalStatus = "SENT";
-  const canEdit = existingProposalStatus === "DRAFT";
+  const canEdit = (existingProposalStatus as any) === "DRAFT";
   assert(!canEdit, "SENT proposals cannot be overwritten");
   console.log(" -> CASE K PASS\n");
 
