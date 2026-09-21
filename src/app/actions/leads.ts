@@ -259,80 +259,107 @@ export async function convertLeadToClient(
 ) {
   const session = await requireRole(["ADMIN", "BDE", "SDR"]);
   try {
-    const leads = await prisma.$queryRawUnsafe<any[]>(
-      `SELECT * FROM "leads" WHERE "id" = $1`,
-      leadId
-    );
-    const lead = leads[0];
-    if (!lead) throw new Error("Lead not found");
-
-    if (session.role === "SDR" && lead.assignedSdrId && lead.assignedSdrId !== session.userId) {
-      throw new Error("FORBIDDEN: You cannot convert another SDR's lead.");
+    if (contractValue < 0 || advanceAmount < 0 || renewalAmount < 0) {
+      throw new Error("INVALID_INPUT: Amounts cannot be negative.");
+    }
+    if (advanceAmount > contractValue && contractValue > 0) {
+      throw new Error("INVALID_INPUT: Advance amount cannot exceed contract value.");
     }
 
-    // Update lead status to CONVERTED
-    await prisma.$executeRawUnsafe(
-      `UPDATE "leads" SET "status" = 'CONVERTED'::"LeadStatus", "updatedAt" = NOW() WHERE "id" = $1`,
-      leadId
-    );
+    const client = await prisma.$transaction(async (tx) => {
+      // 1. Fetch & lock lead inside transaction
+      const lead = await tx.lead.findUnique({
+        where: { id: leadId },
+      });
 
-    // Create client record in Client table
-    let serviceType: "FBP" | "TECH" | "HYBRID" = "FBP";
-    const sUpper = (lead.service || "").toUpperCase();
-    if (sUpper.includes("TECH") || sUpper.includes("WEB") || sUpper.includes("API") || sUpper.includes("DEV") || sUpper.includes("SOFTWARE") || sUpper.includes("APP")) {
-      serviceType = "TECH";
-    } else if (sUpper.includes("HYBRID") || sUpper.includes("COMBO")) {
-      serviceType = "HYBRID";
-    }
+      if (!lead) throw new Error("Lead not found");
 
-    const client = await prisma.client.create({
-      data: {
-        companyName: lead.businessName || lead.clientName,
-        contactPerson: lead.clientName,
-        email: lead.clientEmail || null,
-        phone: lead.clientPhone || null,
-        serviceType: serviceType,
-        billingModel: billingModel,
-        contractValue: contractValue || 0,
-        renewalAmount: renewalAmount || 0,
-        status: "ACTIVE",
-        notes: notes || lead.comment || "Converted from Sales Pipeline",
-        salesCloseDate: new Date(),
-        assignedBdeId: session.role === "BDE" ? session.userId : undefined,
-      } as any,
-    });
+      // 2. Reject duplicate conversion
+      if (lead.status === "CONVERTED") {
+        throw new Error("CONFLICT: Lead has already been converted to a client.");
+      }
 
-    // Automatically create Active Project in Project Hub
-    const projTitle = projectName || `${lead.businessName || lead.clientName} - ${serviceType} Execution`;
-    const projType = serviceType === "TECH" ? "TECH" : serviceType === "HYBRID" ? "HYBRID" : "FBP";
-    const projDeadline = deadline ? new Date(deadline) : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+      // 3. SDR authorization check
+      if (session.role === "SDR" && lead.assignedSdrId && lead.assignedSdrId !== session.userId) {
+        throw new Error("FORBIDDEN: You cannot convert another SDR's lead.");
+      }
 
-    await prisma.project.create({
-      data: {
-        name: projTitle,
-        description: notes || `Project launched for ${client.companyName}`,
-        type: projType as any,
-        status: "IN_PROGRESS",
-        startDate: new Date(),
-        deadline: projDeadline,
-        progress: 0,
-        clientId: client.id,
-      },
-    });
+      // 4. Determine service type
+      let serviceType: "FBP" | "TECH" | "HYBRID" = "FBP";
+      const sUpper = (lead.service || "").toUpperCase();
+      if (sUpper.includes("TECH") || sUpper.includes("WEB") || sUpper.includes("API") || sUpper.includes("DEV") || sUpper.includes("SOFTWARE") || sUpper.includes("APP")) {
+        serviceType = "TECH";
+      } else if (sUpper.includes("HYBRID") || sUpper.includes("COMBO")) {
+        serviceType = "HYBRID";
+      }
 
-    // Automatically log Revenue Entry in Finance if advance collected
-    if (advanceAmount > 0) {
-      await prisma.revenueEntry.create({
+      // 5. Calculate Renewal Date if recurring
+      let calculatedRenewalDate: Date | null = null;
+      if (billingModel === "RECURRING" && renewalAmount > 0) {
+        calculatedRenewalDate = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000);
+      }
+
+      // 6. Update Lead status -> CONVERTED
+      await tx.lead.update({
+        where: { id: leadId },
         data: {
-          amount: advanceAmount,
-          paymentDate: new Date(),
-          revenueType: serviceType as any,
-          paymentStatus: "PAID",
-          description: `Advance Payment collected on Closed Deal`,
-          clientId: client.id,
+          status: "CONVERTED",
         },
       });
-    }
+
+      // 7. Create Client record
+      const createdClient = await tx.client.create({
+        data: {
+          companyName: lead.businessName || lead.clientName || "Unnamed Company",
+          contactPerson: lead.clientName || "Unknown Contact",
+          email: lead.clientEmail || null,
+          phone: lead.clientPhone || null,
+          serviceType: serviceType,
+          billingModel: billingModel,
+          contractValue: contractValue || 0,
+          renewalAmount: renewalAmount || 0,
+          renewalDate: calculatedRenewalDate,
+          status: "ACTIVE",
+          notes: notes || lead.comment || "Converted from Sales Pipeline",
+          salesCloseDate: new Date(),
+          assignedBdeId: session.role === "BDE" ? session.userId : undefined,
+        },
+      });
+
+      // 8. Create Project record
+      const projTitle = projectName || `${createdClient.companyName} - ${serviceType} Execution`;
+      const projType = serviceType === "TECH" ? "TECH" : serviceType === "HYBRID" ? "HYBRID" : "FBP";
+      const projDeadline = deadline ? new Date(deadline) : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+
+      await tx.project.create({
+        data: {
+          name: projTitle,
+          description: notes || `Project launched for ${createdClient.companyName}`,
+          type: projType as any,
+          status: "IN_PROGRESS",
+          startDate: new Date(),
+          deadline: projDeadline,
+          progress: 0,
+          clientId: createdClient.id,
+        },
+      });
+
+      // 9. Create Revenue Entry ONLY when advanceAmount > 0
+      if (advanceAmount > 0) {
+        await tx.revenueEntry.create({
+          data: {
+            amount: advanceAmount,
+            paymentDate: new Date(),
+            revenueType: serviceType as any,
+            paymentStatus: "PAID",
+            description: `Advance Payment collected on Closed Deal (${createdClient.companyName})`,
+            clientId: createdClient.id,
+          },
+        });
+      }
+
+      return createdClient;
+    });
 
     try {
       revalidatePath("/dashboard/sdr");
