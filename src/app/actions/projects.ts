@@ -5,9 +5,17 @@ import { revalidatePath } from "next/cache";
 import { requireRole } from "@/lib/auth";
 
 export async function getProjects() {
-  await requireRole(["ADMIN", "BDE", "SDR"]);
+  const session = await requireRole(["ADMIN", "BDE", "SDR"]);
   try {
+    let whereClause: any = {};
+    if (session.role === "BDE") {
+      whereClause = { client: { assignedBdeId: session.userId } };
+    } else if (session.role === "SDR") {
+      whereClause = { client: { lead: { assignedSdrId: session.userId } } };
+    }
+
     const projects = await prisma.project.findMany({
+      where: whereClause,
       include: {
         client: true,
         tasks: true,
@@ -60,11 +68,29 @@ export async function createProject(data: {
   status?: "PLANNING" | "IN_PROGRESS" | "REVIEW" | "DELIVERED";
   description?: string;
 }) {
-  await requireRole(["ADMIN", "BDE"]);
+  const session = await requireRole(["ADMIN", "BDE"]);
+  if (!data.name || typeof data.name !== "string" || !data.name.trim()) {
+    throw new Error("INVALID_INPUT: Project name is required.");
+  }
+  if (!data.clientId || typeof data.clientId !== "string") {
+    throw new Error("INVALID_INPUT: Valid clientId is required.");
+  }
+
+  // IDOR & Scope Check for BDE
+  if (session.role === "BDE") {
+    const client = await prisma.client.findUnique({
+      where: { id: data.clientId },
+      select: { assignedBdeId: true },
+    });
+    if (!client || client.assignedBdeId !== session.userId) {
+      throw new Error("FORBIDDEN: You can only create projects for clients assigned to you.");
+    }
+  }
+
   try {
     const project = await prisma.project.create({
       data: {
-        name: data.name,
+        name: data.name.trim(),
         clientId: data.clientId,
         type: data.type || "TECH",
         status: (data.status as any) || "IN_PROGRESS",
@@ -80,7 +106,22 @@ export async function createProject(data: {
 }
 
 export async function updateProjectStatus(id: string, status: "PLANNING" | "IN_PROGRESS" | "REVIEW" | "DELIVERED") {
-  await requireRole(["ADMIN", "BDE"]);
+  const session = await requireRole(["ADMIN", "BDE"]);
+  if (!id || typeof id !== "string") {
+    throw new Error("INVALID_INPUT: Valid project id is required.");
+  }
+
+  // IDOR & Scope Check for BDE
+  if (session.role === "BDE") {
+    const project = await prisma.project.findUnique({
+      where: { id },
+      select: { client: { select: { assignedBdeId: true } } },
+    });
+    if (!project || project.client?.assignedBdeId !== session.userId) {
+      throw new Error("FORBIDDEN: You can only update status for projects assigned to you.");
+    }
+  }
+
   try {
     const updated = await prisma.project.update({
       where: { id },
@@ -101,10 +142,17 @@ export async function createTask(data: {
   priority?: "LOW" | "MEDIUM" | "HIGH" | "URGENT";
 }) {
   await requireRole(["ADMIN", "BDE", "SDR"]);
+  if (!data.title || typeof data.title !== "string" || !data.title.trim()) {
+    throw new Error("INVALID_INPUT: Task title is required.");
+  }
+  if (!data.projectId || typeof data.projectId !== "string") {
+    throw new Error("INVALID_INPUT: Valid projectId is required.");
+  }
+
   try {
     const task = await prisma.task.create({
       data: {
-        title: data.title,
+        title: data.title.trim(),
         projectId: data.projectId,
         stage: (data.stage as any) || "TODO",
         priority: (data.priority as any) || "MEDIUM",
@@ -120,6 +168,9 @@ export async function createTask(data: {
 
 export async function updateTaskStage(id: string, stage: "TODO" | "IN_PROGRESS" | "REVIEW" | "DONE") {
   await requireRole(["ADMIN", "BDE", "SDR"]);
+  if (!id || typeof id !== "string") {
+    throw new Error("INVALID_INPUT: Valid task id is required.");
+  }
   try {
     const updated = await prisma.task.update({
       where: { id },
@@ -135,6 +186,9 @@ export async function updateTaskStage(id: string, stage: "TODO" | "IN_PROGRESS" 
 
 export async function deleteTask(id: string) {
   await requireRole(["ADMIN", "BDE"]);
+  if (!id || typeof id !== "string") {
+    throw new Error("INVALID_INPUT: Valid task id is required.");
+  }
   try {
     await prisma.task.delete({ where: { id } });
     try { revalidatePath("/dashboard/projects"); } catch {}
@@ -147,16 +201,5 @@ export async function deleteTask(id: string) {
 
 export async function deleteAllProjectsAndTasks() {
   await requireRole(["ADMIN"]);
-  try {
-    await prisma.task.deleteMany({});
-    await prisma.project.deleteMany({});
-    try {
-      revalidatePath("/dashboard/projects");
-      revalidatePath("/ceo/dashboard");
-    } catch {}
-    return { success: true };
-  } catch (error) {
-    console.error("Failed to delete projects and tasks:", error);
-    throw error;
-  }
+  throw new Error("DISABLED: Bulk deletion of all projects and tasks is disabled.");
 }
