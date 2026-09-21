@@ -138,7 +138,7 @@ export default function CEODashboardPage() {
       }
 
       if (dbClients) {
-        setActiveClientsCount(dbClients.length);
+        setActiveClientsCount(dbClients.filter((c: any) => c.status === "ACTIVE").length);
 
         const newDealsActivity = dbClients.map((c: any) => ({
           title: `Client Onboarded: ${c.companyName}`,
@@ -462,12 +462,12 @@ export default function CEODashboardPage() {
                   <Users size={18} color="#6c5ce7" />
                 </div>
                 <span style={{ display: "inline-flex", alignItems: "center", gap: "2px", fontSize: "11px", fontWeight: 600, color: "#00b894", background: "rgba(0,184,148,0.1)", padding: "2px 6px", borderRadius: "20px" }}>
-                  <ArrowUpRight size={13} /> +14%
+                  <ArrowUpRight size={13} /> Live
                 </span>
               </div>
               <div style={{ fontSize: "clamp(20px, 4vw, 26px)", fontWeight: 700, color: "var(--text-primary)", fontFamily: "'Space Grotesk', sans-serif" }}>{activeClientsCount}</div>
               <div style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "2px" }}>Total Active Clients</div>
-              <div style={{ fontSize: "10px", color: "var(--text-muted)", marginTop: "4px" }}>vs last month</div>
+              <div style={{ fontSize: "10px", color: "var(--text-muted)", marginTop: "4px" }}>active client accounts</div>
             </div>
 
             {/* Card 2: Monthly Revenue */}
