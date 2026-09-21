@@ -5,15 +5,57 @@ import { revalidatePath } from "next/cache";
 import { requireRole } from "@/lib/auth";
 
 export async function getClients() {
-  await requireRole(["ADMIN", "BDE", "SDR"]);
+  const session = await requireRole(["ADMIN", "BDE", "SDR"]);
   try {
-    const clients = await prisma.client.findMany({
-      orderBy: { createdAt: "desc" },
-    });
-    return clients;
+    if (session.role === "ADMIN") {
+      const clients = await prisma.client.findMany({
+        orderBy: { createdAt: "desc" },
+        include: { assignedBde: { select: { id: true, name: true, email: true } } },
+      });
+      return clients;
+    } else if (session.role === "BDE") {
+      const clients = await prisma.client.findMany({
+        where: { assignedBdeId: session.userId },
+        orderBy: { createdAt: "desc" },
+        include: { assignedBde: { select: { id: true, name: true, email: true } } },
+      });
+      return clients;
+    } else {
+      const clients = await prisma.client.findMany({
+        orderBy: { createdAt: "desc" },
+        include: { assignedBde: { select: { id: true, name: true, email: true } } },
+      });
+      return clients;
+    }
   } catch (error) {
     console.error("Failed to fetch clients:", error);
     return [];
+  }
+}
+
+export async function getClientById(clientId: string) {
+  const session = await requireRole(["ADMIN", "BDE", "SDR"]);
+  try {
+    const client = await prisma.client.findUnique({
+      where: { id: clientId },
+      include: {
+        assignedBde: { select: { id: true, name: true, email: true } },
+        projects: { orderBy: { createdAt: "desc" } },
+        revenueEntries: { orderBy: { paymentDate: "desc" } },
+        supportTickets: { orderBy: { createdAt: "desc" } },
+      }
+    });
+
+    if (!client) return null;
+
+    if (session.role === "BDE" && client.assignedBdeId && client.assignedBdeId !== session.userId) {
+      throw new Error("FORBIDDEN: You are not authorized to view another BDE's client.");
+    }
+
+    return client;
+  } catch (error) {
+    console.error("Failed to fetch client by ID:", error);
+    throw error;
   }
 }
 
@@ -61,8 +103,9 @@ export async function createClient(data: {
   notes?: string;
   salesCloseDate?: Date | string | null;
   renewalDate?: Date | string | null;
+  assignedBdeId?: string | null;
 }) {
-  await requireRole(["ADMIN", "BDE"]);
+  const session = await requireRole(["ADMIN", "BDE"]);
   const companyName = data.companyName || "";
   const contactPerson = data.contactPerson || "";
   const email = data.email || null;
@@ -74,6 +117,7 @@ export async function createClient(data: {
   const status = data.status || "ACTIVE";
   const industry = data.industry || null;
   const notes = data.notes || null;
+  const assignedBdeId = data.assignedBdeId || (session.role === "BDE" ? session.userId : null);
 
   const salesCloseDate = data.salesCloseDate ? new Date(data.salesCloseDate) : new Date();
   
@@ -101,6 +145,7 @@ export async function createClient(data: {
         notes,
         salesCloseDate,
         renewalDate,
+        assignedBdeId,
       } as any,
     });
     try {
@@ -112,17 +157,69 @@ export async function createClient(data: {
     try {
       const id = "cl_" + Math.random().toString(36).substring(2, 11) + Date.now().toString(36);
       await prisma.$executeRawUnsafe(
-        `INSERT INTO "clients" ("id", "companyName", "contactPerson", "email", "phone", "serviceType", "billingModel", "contractValue", "renewalAmount", "status", "industry", "notes", "salesCloseDate", "renewalDate", "createdAt", "updatedAt")
-         VALUES ($1, $2, $3, $4, $5, $6::"ServiceType", $7, $8, $9, $10::"ClientStatus", $11, $12, $13, $14, NOW(), NOW())`,
-        id, companyName, contactPerson, email, phone, serviceType, billingModel, contractValue, renewalAmount, status, industry, notes, salesCloseDate, renewalDate
+        `INSERT INTO "clients" ("id", "companyName", "contactPerson", "email", "phone", "serviceType", "billingModel", "contractValue", "renewalAmount", "status", "industry", "notes", "salesCloseDate", "renewalDate", "assignedBdeId", "createdAt", "updatedAt")
+         VALUES ($1, $2, $3, $4, $5, $6::"ServiceType", $7, $8, $9, $10::"ClientStatus", $11, $12, $13, $14, $15, NOW(), NOW())`,
+        id, companyName, contactPerson, email, phone, serviceType, billingModel, contractValue, renewalAmount, status, industry, notes, salesCloseDate, renewalDate, assignedBdeId
       );
       try {
         revalidatePath("/dashboard/crm");
       } catch {}
-      return { id, companyName, contactPerson, email, phone, serviceType, billingModel, contractValue, renewalAmount, status, industry, notes };
+      return { id, companyName, contactPerson, email, phone, serviceType, billingModel, contractValue, renewalAmount, status, industry, notes, assignedBdeId };
     } catch (rawErr) {
       console.error("Failed to create client with raw SQL fallback:", rawErr);
       throw new Error(`Failed to create client: ${rawErr instanceof Error ? rawErr.message : String(rawErr)}`);
     }
+  }
+}
+
+export async function updateClient(
+  id: string,
+  data: {
+    contactPerson?: string;
+    phone?: string;
+    email?: string;
+    status?: "ACTIVE" | "CHURNED" | "RENEWAL_DUE" | "ONBOARDING";
+    notes?: string;
+    industry?: string;
+    website?: string;
+    assignedBdeId?: string | null;
+    renewalDate?: Date | string | null;
+    renewalAmount?: number;
+  }
+) {
+  const session = await requireRole(["ADMIN", "BDE"]);
+  try {
+    const existing = await prisma.client.findUnique({ where: { id } });
+    if (!existing) throw new Error("Client not found");
+
+    if (session.role === "BDE" && existing.assignedBdeId && existing.assignedBdeId !== session.userId) {
+      throw new Error("FORBIDDEN: You cannot edit another BDE's client.");
+    }
+
+    const updated = await prisma.client.update({
+      where: { id },
+      data: {
+        ...(data.contactPerson !== undefined && { contactPerson: data.contactPerson }),
+        ...(data.phone !== undefined && { phone: data.phone || null }),
+        ...(data.email !== undefined && { email: data.email || null }),
+        ...(data.status !== undefined && { status: data.status }),
+        ...(data.notes !== undefined && { notes: data.notes || null }),
+        ...(data.industry !== undefined && { industry: data.industry || null }),
+        ...(data.website !== undefined && { website: data.website || null }),
+        ...(data.assignedBdeId !== undefined && session.role === "ADMIN" && { assignedBdeId: data.assignedBdeId || null }),
+        ...(data.renewalDate !== undefined && { renewalDate: data.renewalDate ? new Date(data.renewalDate) : null }),
+        ...(data.renewalAmount !== undefined && { renewalAmount: data.renewalAmount }),
+      }
+    });
+
+    try {
+      revalidatePath("/dashboard/crm");
+      revalidatePath(`/dashboard/crm/${id}`);
+    } catch {}
+
+    return updated;
+  } catch (error) {
+    console.error("Failed to update client:", error);
+    throw new Error(`Failed to update client: ${error instanceof Error ? error.message : String(error)}`);
   }
 }

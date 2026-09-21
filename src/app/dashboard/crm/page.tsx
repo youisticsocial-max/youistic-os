@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
+import Link from "next/link";
 import { Search, Plus, Building2, Phone, Calendar, Users, TrendingUp, ChevronRight, LayoutGrid, List, Mail, ExternalLink, Trash2 } from "lucide-react";
 import Topbar from "@/components/layout/Topbar";
 import { formatCurrency, formatDate, getDaysUntil } from "@/lib/utils";
@@ -20,51 +21,6 @@ const svcConfig: Record<string, { color: string; bg: string }> = {
   TECH: { color: "#00cec9", bg: "rgba(0,206,201,0.12)" },
   HYBRID: { color: "#fdcb6e", bg: "rgba(253,203,110,0.12)" },
 };
-
-const initialSampleClients: Client[] = [
-  {
-    id: "cli_1",
-    companyName: "Acme Website Corp",
-    contactPerson: "Rajesh Kumar",
-    email: "rajesh@acme.com",
-    phone: "+91 98765 43210",
-    serviceType: "TECH",
-    contractValue: 120000,
-    status: "ACTIVE",
-    industry: "E-Commerce",
-    salesCloseDate: new Date(),
-    renewalDate: new Date(Date.now() + 180 * 24 * 60 * 60 * 1000),
-    createdAt: new Date(),
-  },
-  {
-    id: "cli_2",
-    companyName: "BHFG (Hamran)",
-    contactPerson: "Hamran BHFG",
-    email: "hamran@bhfg.com",
-    phone: "+91 99887 76655",
-    serviceType: "HYBRID",
-    contractValue: 350000,
-    status: "ACTIVE",
-    industry: "Luxury Fashion",
-    salesCloseDate: new Date(),
-    renewalDate: new Date(Date.now() + 300 * 24 * 60 * 60 * 1000),
-    createdAt: new Date(),
-  },
-  {
-    id: "cli_3",
-    companyName: "Veda Wellness",
-    contactPerson: "Ananya Sharma",
-    email: "ananya@vedawellness.in",
-    phone: "+91 91234 56789",
-    serviceType: "FBP",
-    contractValue: 95000,
-    status: "RENEWAL_DUE",
-    industry: "Healthcare",
-    salesCloseDate: new Date(),
-    renewalDate: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000),
-    createdAt: new Date(),
-  }
-];
 
 export default function CRMPage() {
   const [clients, setClients] = useState<Client[]>([]);
@@ -419,9 +375,12 @@ export default function CRMPage() {
                         )}
                       </div>
 
-                      <button style={{ background: "rgba(108,92,231,0.12)", border: "1px solid rgba(108,92,231,0.3)", color: "#6366f1", padding: "6px 12px", borderRadius: "8px", fontSize: "11px", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: "4px" }}>
-                        View Vault <ChevronRight size={12} />
-                      </button>
+                      <Link
+                        href={`/dashboard/crm/${client.id}`}
+                        style={{ background: "rgba(108,92,231,0.12)", border: "1px solid rgba(108,92,231,0.3)", color: "#6366f1", padding: "6px 12px", borderRadius: "8px", fontSize: "11px", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: "4px", textDecoration: "none" }}
+                      >
+                        Client 360 <ChevronRight size={12} />
+                      </Link>
                     </div>
                   </div>
                 );
@@ -448,30 +407,22 @@ export default function CRMPage() {
                     return (
                       <tr key={client.id} style={{ borderBottom: "1px solid var(--bg-border)", transition: "background 0.15s", cursor: "pointer" }}>
                         <td style={{ padding: "16px 20px" }}>
-                          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                            <div style={{ width: "38px", height: "38px", borderRadius: "9px", background: svc.bg, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "14px", fontWeight: 800, color: svc.color, flexShrink: 0 }}>{client.companyName.slice(0, 2).toUpperCase()}</div>
-                            <div>
-                              <div style={{ fontSize: "14px", fontWeight: 600, color: "var(--text-primary)" }}>{client.companyName}</div>
-                              {client.industry && <div style={{ fontSize: "12px", color: "var(--text-secondary)" }}>{client.industry}</div>}
-                            </div>
-                          </div>
+                          <Link href={`/dashboard/crm/${client.id}`} style={{ textDecoration: "none", color: "inherit" }}>
+                            <div style={{ fontSize: "14px", fontWeight: 700, color: "var(--text-primary)" }}>{client.companyName}</div>
+                            <div style={{ fontSize: "11px", color: "var(--text-secondary)" }}>{client.industry || "General"}</div>
+                          </Link>
                         </td>
                         <td style={{ padding: "16px 20px" }}>
-                          <div style={{ fontSize: "13px", fontWeight: 500, color: "var(--text-primary)" }}>{client.contactPerson}</div>
-                          {client.phone && <div style={{ fontSize: "12px", color: "var(--text-secondary)", display: "flex", alignItems: "center", gap: "4px", marginTop: "2px" }}><Phone size={10} />{client.phone}</div>}
+                          <div style={{ fontSize: "13px", fontWeight: 600, color: "var(--text-primary)" }}>{client.contactPerson}</div>
+                          <div style={{ fontSize: "11px", color: "var(--text-secondary)" }}>{client.phone || client.email || "No direct contact info"}</div>
                         </td>
                         <td style={{ padding: "16px 20px" }}>
-                          <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-                            <span style={{ background: svc.bg, color: svc.color, padding: "3px 10px", borderRadius: "6px", fontSize: "12px", fontWeight: 700, width: "fit-content" }}>{client.serviceType}</span>
-                            <span style={{ fontSize: "10px", fontWeight: 600, color: client.billingModel === "RECURRING" ? "#818cf8" : "#00cec9" }}>
-                              {client.billingModel === "RECURRING" ? "🔄 Retainer" : "⚡ One-Time"}
-                            </span>
-                          </div>
+                          <span style={{ fontSize: "11px", fontWeight: 700, color: svc.color }}>{client.serviceType}</span>
+                          <div style={{ fontSize: "10px", color: "var(--text-muted)" }}>{client.billingModel === "RECURRING" ? "Retainer" : "One-Time"}</div>
                         </td>
                         <td style={{ padding: "16px 20px" }}>
-                          <span style={{ fontSize: "14px", fontWeight: 700, color: "var(--text-primary)" }}>{formatCurrency(client.contractValue)}</span>
-                          <div style={{ fontSize: "11px", color: "var(--text-muted)" }}>
-                            {client.billingModel === "RECURRING" ? "/year" : "one-time"}
+                          <div style={{ fontSize: "14px", fontWeight: 700, color: "#00b894", fontFamily: "'Space Grotesk', sans-serif" }}>
+                            {formatCurrency(client.contractValue)}
                           </div>
                           {client.renewalAmount && client.renewalAmount > 0 ? (
                             <div style={{ fontSize: "10px", color: "#fdcb6e", fontWeight: 600, marginTop: "2px" }}>
@@ -499,7 +450,9 @@ export default function CRMPage() {
                         </td>
                         <td style={{ padding: "16px 20px" }}>
                           <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                            <button style={{ background: "rgba(108,92,231,0.1)", border: "1px solid rgba(108,92,231,0.2)", color: "#6366f1", padding: "6px 12px", borderRadius: "7px", fontSize: "12px", fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: "4px" }}>View <ChevronRight size={12} /></button>
+                            <Link href={`/dashboard/crm/${client.id}`} style={{ background: "rgba(108,92,231,0.1)", border: "1px solid rgba(108,92,231,0.2)", color: "#6366f1", padding: "6px 12px", borderRadius: "7px", fontSize: "12px", fontWeight: 600, textDecoration: "none", display: "flex", alignItems: "center", gap: "4px" }}>
+                              Client 360 <ChevronRight size={12} />
+                            </Link>
                             <button 
                               onClick={(e) => { e.stopPropagation(); handleDeleteClient(client.id, client.companyName); }}
                               title="Delete Client"
