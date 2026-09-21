@@ -177,10 +177,17 @@ export default function CEODashboardPage() {
       }
 
       if (finance && finance.revenueEntries) {
-        const totalRev = finance.revenueEntries
-          .filter((r: any) => !r.paymentStatus || r.paymentStatus === "PAID")
+        const now = new Date();
+        const curMonth = now.getMonth();
+        const curYear = now.getFullYear();
+        const currentMonthRev = finance.revenueEntries
+          .filter((r: any) => {
+            if (r.paymentStatus && r.paymentStatus !== "PAID") return false;
+            const pDate = new Date(r.paymentDate);
+            return pDate.getMonth() === curMonth && pDate.getFullYear() === curYear;
+          })
           .reduce((sum: number, r: any) => sum + r.amount, 0);
-        setMonthlyRevenueVal(totalRev);
+        setMonthlyRevenueVal(currentMonthRev);
       }
     }
     loadCEOMetrics();
@@ -470,12 +477,12 @@ export default function CEODashboardPage() {
                   <DollarSign size={18} color="#00cec9" />
                 </div>
                 <span style={{ display: "inline-flex", alignItems: "center", gap: "2px", fontSize: "11px", fontWeight: 600, color: "#00b894", background: "rgba(0,184,148,0.1)", padding: "2px 6px", borderRadius: "20px" }}>
-                  <ArrowUpRight size={13} /> +16.1%
+                  <ArrowUpRight size={13} /> Live
                 </span>
               </div>
               <div style={{ fontSize: "clamp(20px, 4vw, 26px)", fontWeight: 700, color: "var(--text-primary)", fontFamily: "'Space Grotesk', sans-serif" }}>₹{monthlyRevenueVal.toLocaleString("en-IN")}</div>
-              <div style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "2px" }}>Monthly Revenue</div>
-              <div style={{ fontSize: "10px", color: "var(--text-muted)", marginTop: "4px" }}>vs last month</div>
+              <div style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "2px" }}>Current Month Revenue</div>
+              <div style={{ fontSize: "10px", color: "var(--text-muted)", marginTop: "4px" }}>realized cash collected</div>
             </div>
 
             {/* Card 3: Avg Closing Ratio */}

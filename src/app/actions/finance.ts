@@ -39,11 +39,15 @@ export async function createExpense(data: {
   vendor?: string;
 }) {
   await requireRole(["ADMIN"]);
+  const numericAmount = Number(data.amount);
+  if (!Number.isFinite(numericAmount) || numericAmount <= 0) {
+    throw new Error("INVALID_AMOUNT: Expense amount must be a positive finite number.");
+  }
   try {
     const expense = await prisma.expenseEntry.create({
       data: {
         category: data.category,
-        amount: Number(data.amount),
+        amount: numericAmount,
         expenseDate: new Date(data.expenseDate),
         description: data.description,
         vendor: data.vendor || null,
@@ -69,12 +73,28 @@ export async function createRevenue(data: {
   description?: string;
   invoiceNumber?: string;
 }) {
-  await requireRole(["ADMIN", "BDE"]);
+  const session = await requireRole(["ADMIN", "BDE"]);
+  const numericAmount = Number(data.amount);
+  if (!Number.isFinite(numericAmount) || numericAmount <= 0) {
+    throw new Error("INVALID_AMOUNT: Revenue amount must be a positive finite number.");
+  }
+
+  // IDOR & Scope Check: BDE can only create revenue entries for clients assigned to them
+  if (session.role === "BDE") {
+    const client = await prisma.client.findUnique({
+      where: { id: data.clientId },
+      select: { assignedBdeId: true },
+    });
+    if (!client || client.assignedBdeId !== session.userId) {
+      throw new Error("FORBIDDEN: You can only record revenue for clients assigned to you.");
+    }
+  }
+
   try {
     const revenue = await prisma.revenueEntry.create({
       data: {
         clientId: data.clientId,
-        amount: Number(data.amount),
+        amount: numericAmount,
         paymentDate: new Date(data.paymentDate),
         revenueType: data.revenueType,
         paymentStatus: data.paymentStatus || "PAID",
