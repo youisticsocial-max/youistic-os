@@ -267,21 +267,33 @@ export async function convertLeadToClient(
     }
 
     const client = await prisma.$transaction(async (tx) => {
-      // 1. Fetch & lock lead inside transaction
+      // 1. Fetch lead for data extraction & authorization checks
       const lead = await tx.lead.findUnique({
         where: { id: leadId },
       });
 
       if (!lead) throw new Error("Lead not found");
 
-      // 2. Reject duplicate conversion
-      if (lead.status === "CONVERTED") {
-        throw new Error("CONFLICT: Lead has already been converted to a client.");
-      }
-
-      // 3. SDR authorization check
+      // 2. SDR authorization check
       if (session.role === "SDR" && lead.assignedSdrId && lead.assignedSdrId !== session.userId) {
         throw new Error("FORBIDDEN: You cannot convert another SDR's lead.");
+      }
+
+      // 3. ATOMIC CONVERSION CLAIM
+      // Attempts to lock and update status from non-CONVERTED to CONVERTED in a single atomic DB operation.
+      // If another concurrent transaction claimed it first, claimed.count will be 0.
+      const claimed = await tx.lead.updateMany({
+        where: {
+          id: leadId,
+          status: { not: "CONVERTED" }
+        },
+        data: {
+          status: "CONVERTED"
+        }
+      });
+
+      if (claimed.count !== 1) {
+        throw new Error("CONFLICT: Lead has already been converted to a client or is being processed.");
       }
 
       // 4. Determine service type
@@ -299,15 +311,7 @@ export async function convertLeadToClient(
         calculatedRenewalDate = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000);
       }
 
-      // 6. Update Lead status -> CONVERTED
-      await tx.lead.update({
-        where: { id: leadId },
-        data: {
-          status: "CONVERTED",
-        },
-      });
-
-      // 7. Create Client record
+      // 6. Create Client record (happens AFTER successful atomic claim)
       const createdClient = await tx.client.create({
         data: {
           companyName: lead.businessName || lead.clientName || "Unnamed Company",
@@ -326,7 +330,7 @@ export async function convertLeadToClient(
         },
       });
 
-      // 8. Create Project record
+      // 7. Create Project record
       const projTitle = projectName || `${createdClient.companyName} - ${serviceType} Execution`;
       const projType = serviceType === "TECH" ? "TECH" : serviceType === "HYBRID" ? "HYBRID" : "FBP";
       const projDeadline = deadline ? new Date(deadline) : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
@@ -344,7 +348,7 @@ export async function convertLeadToClient(
         },
       });
 
-      // 9. Create Revenue Entry ONLY when advanceAmount > 0
+      // 8. Create Revenue Entry ONLY when advanceAmount > 0
       if (advanceAmount > 0) {
         await tx.revenueEntry.create({
           data: {
