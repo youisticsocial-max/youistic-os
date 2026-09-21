@@ -49,6 +49,25 @@ export async function getClientById(clientId: string) {
         projects: { orderBy: { createdAt: "desc" } },
         revenueEntries: { orderBy: { paymentDate: "desc" } },
         supportTickets: { orderBy: { createdAt: "desc" } },
+        assets: {
+          select: {
+            id: true,
+            assetType: true,
+            name: true,
+            domainName: true,
+            domainRegistrar: true,
+            hostingProvider: true,
+            hostingIp: true,
+            hostingUser: true,
+            figmaLink: true,
+            githubRepo: true,
+            vaultRef: true,
+            notes: true,
+            createdAt: true,
+            updatedAt: true,
+          },
+          orderBy: { createdAt: "desc" },
+        },
       }
     });
 

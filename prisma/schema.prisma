@@ -266,6 +266,7 @@ model Client {
   projects        Project[]
   supportTickets  SupportTicket[]
   revenueEntries  RevenueEntry[]
+  assets          ClientAsset[]
 
   @@map("clients")
 }
@@ -510,5 +511,40 @@ model Proposal {
   @@index([status])
   @@index([createdAt])
   @@map("proposals")
+}
+
+// ─────────────────────────────────────────────
+// CRM: ASSETS / VAULT METADATA
+// ─────────────────────────────────────────────
+
+model ClientAsset {
+  id                 String   @id @default(cuid())
+  assetType          String   @default("CLIENT") // "CLIENT" | "AGENCY"
+  name               String?  // Display title e.g. "LawYours Production Domain"
+  clientName         String?  // Fallback owner name
+  businessName       String?
+  projectDescription String?  @db.Text
+  domainName         String?
+  domainRegistrar    String?
+  hostingProvider    String?
+  hostingIp          String?
+  hostingUser        String?  // Safe username / email identifier
+  figmaLink          String?
+  githubRepo         String?
+  prompts            String?  @db.Text
+  vaultRef           String?  // Bitwarden / Vault item reference identifier
+  notes              String?  @db.Text
+
+  // Relational link to Client
+  clientId           String?
+  client             Client?  @relation(fields: [clientId], references: [id], onDelete: SetNull)
+
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@index([clientId])
+  @@index([assetType])
+  @@index([createdAt])
+  @@map("client_assets")
 }
 

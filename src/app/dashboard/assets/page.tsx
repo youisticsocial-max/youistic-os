@@ -4,13 +4,15 @@ import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import Topbar from "@/components/layout/Topbar";
 import { 
-  Key, Globe, Server, Database, FileText, Cpu, ExternalLink, Plus, Search, 
-  Eye, EyeOff, Copy, Trash2, Edit3, ShieldCheck, Sparkles, Check, X, Code2, Lock, Building, Users
+  Globe, Server, Database, FileText, Cpu, ExternalLink, Plus, Search, 
+  Trash2, Edit3, ShieldCheck, Sparkles, Check, X, Code2, Lock, Building, Users
 } from "lucide-react";
 import { getClientAssets, createClientAsset, updateClientAsset, deleteClientAsset } from "@/app/actions/assets";
+import { getClients } from "@/app/actions/clients";
 
 export default function AssetsPage() {
   const [assets, setAssets] = useState<any[]>([]);
+  const [clients, setClients] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedAsset, setSelectedAsset] = useState<any>(null);
@@ -23,13 +25,10 @@ export default function AssetsPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
 
-  // Masked Passwords state tracking
-  const [showPasswords, setShowPasswords] = useState<{ [key: string]: boolean }>({});
-  const [copiedKey, setCopiedKey] = useState<string | null>(null);
-
   useEffect(() => {
     setMounted(true);
     fetchAssets();
+    fetchClients();
   }, []);
 
   const fetchAssets = async () => {
@@ -44,14 +43,13 @@ export default function AssetsPage() {
     setLoading(false);
   };
 
-  const toggleShowPassword = (fieldId: string) => {
-    setShowPasswords(prev => ({ ...prev, [fieldId]: !prev[fieldId] }));
-  };
-
-  const copyToClipboard = (text: string, label: string) => {
-    navigator.clipboard.writeText(text);
-    setCopiedKey(label);
-    setTimeout(() => setCopiedKey(null), 2000);
+  const fetchClients = async () => {
+    try {
+      const data = await getClients();
+      setClients(data || []);
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   const handleDelete = async (id: string) => {
@@ -69,23 +67,26 @@ export default function AssetsPage() {
     e.preventDefault();
     setIsSubmitting(true);
     const formData = new FormData(e.currentTarget);
+    
+    const selectedClientId = formData.get("clientId") as string;
+    const matchedClient = clients.find(c => c.id === selectedClientId);
+
     const payload = {
       assetType: (formData.get("assetType") as string) || activeTab,
-      clientName: formData.get("clientName") as string,
+      name: formData.get("name") as string,
+      clientId: selectedClientId || undefined,
+      clientName: (formData.get("clientName") as string) || (matchedClient ? matchedClient.companyName : ""),
       businessName: formData.get("businessName") as string,
       projectDescription: formData.get("projectDescription") as string,
       domainName: formData.get("domainName") as string,
       domainRegistrar: formData.get("domainRegistrar") as string,
-      domainPassword: formData.get("domainPassword") as string,
       hostingProvider: formData.get("hostingProvider") as string,
       hostingIp: formData.get("hostingIp") as string,
       hostingUser: formData.get("hostingUser") as string,
-      hostingPassword: formData.get("hostingPassword") as string,
-      databaseUri: formData.get("databaseUri") as string,
-      apiKeys: formData.get("apiKeys") as string,
-      prompts: formData.get("prompts") as string,
       figmaLink: formData.get("figmaLink") as string,
       githubRepo: formData.get("githubRepo") as string,
+      prompts: formData.get("prompts") as string,
+      vaultRef: formData.get("vaultRef") as string,
       notes: formData.get("notes") as string,
     };
 
@@ -97,22 +98,23 @@ export default function AssetsPage() {
       }
       setIsModalOpen(false);
       setEditingId(null);
+      setSelectedAsset(null);
       fetchAssets();
     } catch (err) {
       console.error(err);
-      alert("Failed to save asset");
+      alert("Failed to save asset metadata");
     }
     setIsSubmitting(false);
   };
 
   const filteredAssets = assets.filter(a => {
-    // Tab filter: CLIENT vs AGENCY
     const typeMatch = (a.assetType || "CLIENT") === activeTab;
     if (!typeMatch) return false;
 
     if (!searchQuery) return true;
     const q = searchQuery.toLowerCase();
     return (
+      (a.name && a.name.toLowerCase().includes(q)) ||
       (a.clientName && a.clientName.toLowerCase().includes(q)) ||
       (a.businessName && a.businessName.toLowerCase().includes(q)) ||
       (a.domainName && a.domainName.toLowerCase().includes(q))
@@ -124,11 +126,11 @@ export default function AssetsPage() {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", minHeight: "100%" }}>
-      <Topbar title="Assets & Credentials Vault" subtitle="Master repository for Client Projects & Agency Internal Credentials" />
+      <Topbar title="Assets & Vault Metadata" subtitle="Safe relational metadata and Bitwarden Vault references for Client & Agency Assets" />
 
       <main style={{ padding: "28px", display: "flex", flexDirection: "column", gap: "24px" }} className="animate-in">
         
-        {/* TOP ASSET TYPE TOGGLE SWITCH: CLIENTS vs US (AGENCY) */}
+        {/* TOP TOGGLE */}
         <div 
           style={{ 
             display: "flex", 
@@ -148,21 +150,18 @@ export default function AssetsPage() {
               style={{
                 padding: "8px 18px",
                 borderRadius: "10px",
-                border: activeTab === "CLIENT" ? "1px solid #6366f1" : "1px solid var(--bg-border)",
-                background: activeTab === "CLIENT" ? "linear-gradient(135deg, rgba(99, 102, 241, 0.25), rgba(79, 70, 229, 0.35))" : "var(--bg-input)",
-                color: activeTab === "CLIENT" ? "#ffffff" : "var(--text-secondary)",
                 fontSize: "13px",
                 fontWeight: 700,
+                border: "none",
                 cursor: "pointer",
+                background: activeTab === "CLIENT" ? "linear-gradient(135deg, #6366f1 0%, #4338ca 100%)" : "transparent",
+                color: activeTab === "CLIENT" ? "#ffffff" : "var(--text-secondary)",
                 display: "flex",
                 alignItems: "center",
-                gap: "8px",
-                boxShadow: activeTab === "CLIENT" ? "0 4px 14px rgba(99, 102, 241, 0.3)" : "none",
-                transition: "all 0.2s ease"
+                gap: "8px"
               }}
             >
-              <Users size={16} color={activeTab === "CLIENT" ? "#818cf8" : "#64748b"} />
-              👥 Clients Assets ({clientCount})
+              <Users size={16} /> Client Assets ({clientCount})
             </button>
 
             <button
@@ -170,227 +169,167 @@ export default function AssetsPage() {
               style={{
                 padding: "8px 18px",
                 borderRadius: "10px",
-                border: activeTab === "AGENCY" ? "1px solid #a855f7" : "1px solid var(--bg-border)",
-                background: activeTab === "AGENCY" ? "linear-gradient(135deg, rgba(168, 85, 247, 0.25), rgba(147, 51, 234, 0.35))" : "var(--bg-input)",
-                color: activeTab === "AGENCY" ? "#ffffff" : "var(--text-secondary)",
                 fontSize: "13px",
                 fontWeight: 700,
+                border: "none",
                 cursor: "pointer",
+                background: activeTab === "AGENCY" ? "linear-gradient(135deg, #a855f7 0%, #7e22ce 100%)" : "transparent",
+                color: activeTab === "AGENCY" ? "#ffffff" : "var(--text-secondary)",
                 display: "flex",
                 alignItems: "center",
-                gap: "8px",
-                boxShadow: activeTab === "AGENCY" ? "0 4px 14px rgba(168, 85, 247, 0.3)" : "none",
-                transition: "all 0.2s ease"
+                gap: "8px"
               }}
             >
-              <Building size={16} color={activeTab === "AGENCY" ? "#c084fc" : "#64748b"} />
-              🏢 Us / Agency Assets ({agencyCount})
+              <Building size={16} /> Agency Internal ({agencyCount})
             </button>
           </div>
 
-          <span style={{ fontSize: "12px", color: activeTab === "CLIENT" ? "#818cf8" : "#c084fc", background: "rgba(255,255,255,0.03)", border: "1px solid var(--bg-border)", padding: "6px 14px", borderRadius: "20px", fontWeight: 600 }}>
-            {activeTab === "CLIENT" ? "👥 Viewing Client Project Credentials & Vaults" : "🏢 Viewing Agency Internal Logins, AWS & Service Passwords"}
-          </span>
-        </div>
+          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+            <div style={{ position: "relative", minWidth: "260px" }}>
+              <Search size={15} style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: "var(--text-muted)" }} />
+              <input
+                type="text"
+                placeholder={`Search ${activeTab === "CLIENT" ? "client or domain" : "agency tool"}...`}
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                style={{
+                  width: "100%",
+                  background: "var(--bg-input)",
+                  border: "1px solid var(--bg-border)",
+                  borderRadius: "10px",
+                  padding: "8px 12px 8px 36px",
+                  fontSize: "13px",
+                  color: "var(--text-primary)",
+                  outline: "none"
+                }}
+              />
+            </div>
 
-        {/* SEARCH & ADD ACTION BAR */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "14px", flexWrap: "wrap", background: "var(--bg-card)", border: "1px solid var(--bg-border)", borderRadius: "14px", padding: "14px" }}>
-          <div style={{ position: "relative", flex: 1, minWidth: "240px" }}>
-            <Search style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: "var(--text-muted)" }} size={16} />
-            <input 
-              type="text" 
-              placeholder={`Search ${activeTab === "CLIENT" ? "client, business or domain" : "agency asset, internal service or tool"}...`} 
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              style={{ 
-                width: "100%", 
-                backgroundColor: "var(--bg-input)", 
-                border: "1px solid var(--bg-border)", 
-                borderRadius: "10px", 
-                padding: "10px 16px 10px 36px", 
-                fontSize: "13px", 
-                color: "var(--text-primary)", 
-                outline: "none" 
-              }} 
-            />
+            <button
+              onClick={() => {
+                setEditingId(null);
+                setSelectedAsset(null);
+                setIsModalOpen(true);
+              }}
+              style={{
+                padding: "8px 18px",
+                borderRadius: "10px",
+                fontSize: "13px",
+                fontWeight: 700,
+                border: "none",
+                cursor: "pointer",
+                background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
+                color: "white",
+                display: "flex",
+                alignItems: "center",
+                gap: "6px"
+              }}
+            >
+              <Plus size={16} /> Add Asset Record
+            </button>
           </div>
-            {copiedKey && (
-              <span style={{ fontSize: "12px", color: "#34d399", background: "rgba(16,185,129,0.15)", border: "1px solid rgba(16,185,129,0.3)", padding: "6px 14px", borderRadius: "8px", fontWeight: 600, display: "flex", alignItems: "center", gap: "6px" }}>
-                <Check size={14} /> Copied {copiedKey} to Clipboard!
-              </span>
-            )}
-
-          <button
-            onClick={() => {
-              setEditingId(null);
-              setSelectedAsset(null);
-              setIsModalOpen(true);
-            }}
-            style={{ display: "flex", alignItems: "center", gap: "8px", padding: "10px 20px", background: activeTab === "CLIENT" ? "linear-gradient(135deg, #6366f1 0%, #4338ca 100%)" : "linear-gradient(135deg, #a855f7 0%, #7e22ce 100%)", border: "none", borderRadius: "12px", fontSize: "14px", fontWeight: 700, color: "white", cursor: "pointer", boxShadow: "0 4px 14px rgba(99,102,241,0.35)" }}
-          >
-            <Plus size={18} /> + Add {activeTab === "CLIENT" ? "Client Asset" : "Agency Asset"}
-          </button>
         </div>
 
-        {/* Assets Grid */}
-        <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
-          {filteredAssets.length === 0 ? (
-            <div className="card-youistic" style={{ padding: "40px", textAlign: "center", color: "#94a3b8" }}>
-              No assets found for {activeTab === "CLIENT" ? "Clients" : "Agency Internal (Us)"}. Click <strong>+ Add Asset</strong> to save credentials!
+        {/* ASSET LIST GRID */}
+        <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+          {loading ? (
+            <div style={{ padding: "40px", textAlign: "center", color: "var(--text-secondary)", fontSize: "14px" }}>
+              Loading safe asset metadata...
+            </div>
+          ) : filteredAssets.length === 0 ? (
+            <div style={{ padding: "50px", textAlign: "center", background: "var(--bg-card)", border: "1px solid var(--bg-border)", borderRadius: "16px", color: "var(--text-secondary)", fontSize: "14px" }}>
+              No asset records found. Click <strong>+ Add Asset Record</strong> to create asset metadata.
             </div>
           ) : (
             filteredAssets.map((asset) => (
               <div 
                 key={asset.id} 
-                className="card-youistic" 
-                style={{ padding: "24px", display: "flex", flexDirection: "column", gap: "20px", border: "1px solid var(--bg-border)", borderRadius: "16px", background: "var(--bg-card)" }}
+                className="card-youistic"
+                style={{
+                  background: "var(--bg-card)",
+                  border: "1px solid var(--bg-border)",
+                  borderRadius: "16px",
+                  padding: "20px",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "16px"
+                }}
               >
-                {/* Asset Title Bar */}
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "12px", borderBottom: "1px solid var(--bg-border)", paddingBottom: "16px" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap", flex: 1, minWidth: "200px" }}>
-                    <div style={{ width: "44px", height: "44px", borderRadius: "12px", background: activeTab === "CLIENT" ? "linear-gradient(135deg, #6366f1 0%, #4338ca 100%)" : "linear-gradient(135deg, #a855f7 0%, #7e22ce 100%)", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 12px rgba(168,85,247,0.3)", flexShrink: 0 }}>
-                      <ShieldCheck size={24} color="white" />
+                {/* Header Row */}
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "12px" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                    <div style={{ width: "42px", height: "42px", borderRadius: "12px", background: asset.assetType === "AGENCY" ? "rgba(168,85,247,0.15)" : "rgba(99,102,241,0.15)", border: `1px solid ${asset.assetType === "AGENCY" ? "rgba(168,85,247,0.3)" : "rgba(99,102,241,0.3)"}`, display: "flex", alignItems: "center", justifyContent: "center", color: asset.assetType === "AGENCY" ? "#c084fc" : "#818cf8" }}>
+                      {asset.assetType === "AGENCY" ? <Building size={20} /> : <Globe size={20} />}
                     </div>
-                    <div style={{ minWidth: 0 }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
-                        <h3 style={{ fontSize: "18px", fontWeight: 800, color: "var(--text-primary)", margin: 0, fontFamily: "'Space Grotesk', sans-serif" }}>
-                          {asset.businessName || asset.clientName}
-                        </h3>
+                    <div>
+                      <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                        <h4 style={{ fontSize: "16px", fontWeight: 700, color: "var(--text-primary)", margin: 0 }}>
+                          {asset.name || asset.businessName || asset.clientName}
+                        </h4>
                         <span style={{ fontSize: "10px", fontWeight: 700, padding: "2px 8px", borderRadius: "12px", background: asset.assetType === "AGENCY" ? "rgba(168,85,247,0.2)" : "rgba(99,102,241,0.2)", color: asset.assetType === "AGENCY" ? "#c084fc" : "#6366f1", border: `1px solid ${asset.assetType === "AGENCY" ? "rgba(168,85,247,0.3)" : "rgba(99,102,241,0.3)"}` }}>
-                          {asset.assetType === "AGENCY" ? "🏢 Agency Internal" : "👥 Client Vault"}
+                          {asset.assetType === "AGENCY" ? "🏢 Agency Internal" : "👥 Client Asset"}
                         </span>
+                        {asset.vaultRef ? (
+                          <span style={{ fontSize: "10px", fontWeight: 700, padding: "2px 8px", borderRadius: "12px", background: "rgba(16,185,129,0.15)", color: "#10b981", border: "1px solid rgba(16,185,129,0.3)", display: "flex", alignItems: "center", gap: "4px" }}>
+                            <Lock size={10} /> Vault Ref Configured
+                          </span>
+                        ) : (
+                          <span style={{ fontSize: "10px", fontWeight: 500, padding: "2px 8px", borderRadius: "12px", background: "rgba(148,163,184,0.1)", color: "#94a3b8" }}>
+                            No Vault Ref
+                          </span>
+                        )}
                       </div>
-                      <p style={{ fontSize: "12px", color: "var(--text-secondary)", margin: "3px 0 0", fontWeight: 600 }}>
-                        {asset.assetType === "AGENCY" ? "Internal Account Owner:" : "Client Owner:"} <strong>{asset.clientName}</strong> · Domain/Service: <span style={{ color: "#0284c7" }}>{asset.domainName || "N/A"}</span>
-                      </p>
+                      <div style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "4px" }}>
+                        {asset.client?.companyName ? (
+                          <>Linked Client: <strong style={{ color: "#818cf8" }}>{asset.client.companyName}</strong></>
+                        ) : (
+                          <>Owner: <strong>{asset.clientName || "N/A"}</strong></>
+                        )}
+                        {" · Domain: "}
+                        <span style={{ color: "#0284c7" }}>{asset.domainName || "N/A"}</span>
+                      </div>
                     </div>
                   </div>
 
-                  <div style={{ display: "flex", alignItems: "center", gap: "8px", flexShrink: 0 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                     <button
                       onClick={() => {
                         setEditingId(asset.id);
                         setSelectedAsset(asset);
                         setIsModalOpen(true);
                       }}
-                      style={{ background: "var(--bg-input)", border: "1px solid var(--bg-border)", color: "var(--text-primary)", padding: "8px 12px", borderRadius: "8px", fontSize: "12px", fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: "6px" }}
+                      style={{ background: "rgba(99,102,241,0.1)", border: "1px solid rgba(99,102,241,0.2)", color: "#818cf8", padding: "6px 12px", borderRadius: "8px", fontSize: "12px", fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: "4px" }}
                     >
-                      <Edit3 size={14} /> Edit Vault
+                      <Edit3 size={14} /> Edit Metadata
                     </button>
+
                     <button
                       onClick={() => handleDelete(asset.id)}
-                      style={{ background: "rgba(239, 68, 68, 0.1)", border: "1px solid rgba(239, 68, 68, 0.3)", color: "#f87171", padding: "8px 12px", borderRadius: "8px", fontSize: "12px", fontWeight: 600, cursor: "pointer" }}
+                      style={{ background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.2)", color: "#ef4444", padding: "6px 10px", borderRadius: "8px", fontSize: "12px", cursor: "pointer" }}
                     >
                       <Trash2 size={14} />
                     </button>
                   </div>
                 </div>
 
-                {/* Master Description */}
-                {asset.projectDescription && (
-                  <div style={{ background: "var(--bg-input)", border: "1px solid var(--bg-border)", borderRadius: "12px", padding: "14px 18px" }}>
-                    <div style={{ fontSize: "11px", fontWeight: 700, color: "#6366f1", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: "6px", display: "flex", alignItems: "center", gap: "6px" }}>
-                      <FileText size={14} color="#6366f1" /> {asset.assetType === "AGENCY" ? "Agency Infrastructure & Service Description:" : "Master Project Description & Architecture Scope:"}
-                    </div>
-                    <p style={{ fontSize: "13px", color: "var(--text-primary)", margin: 0, lineHeight: "1.5" }}>
-                      {asset.projectDescription}
-                    </p>
-                  </div>
-                )}
-
-                {/* Credentials Grid: Domain, Hosting, DB */}
-                <div className="assets-credentials-grid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "14px" }}>
-                  
-                  {/* Domain / Service Login Vault */}
-                  <div style={{ background: "var(--bg-input)", border: "1px solid var(--bg-border)", borderRadius: "12px", padding: "16px", display: "flex", flexDirection: "column", gap: "10px" }}>
-                    <div style={{ fontSize: "12px", fontWeight: 700, color: "#0284c7", display: "flex", alignItems: "center", gap: "6px" }}>
-                      <Globe size={16} /> {asset.assetType === "AGENCY" ? "Account & Registrar Login" : "Domain Credentials"}
-                    </div>
-                    <div style={{ fontSize: "12px", color: "var(--text-secondary)" }}>
-                      <strong>Service/Registrar:</strong> {asset.domainRegistrar || "N/A"}
-                    </div>
-                    <div style={{ fontSize: "12px", color: "var(--text-secondary)" }}>
-                      <strong>Domain/URL:</strong> {asset.domainName || "N/A"}
-                    </div>
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "var(--bg-card)", padding: "8px 10px", borderRadius: "6px", border: "1px solid var(--bg-border)" }}>
-                      <span style={{ fontFamily: "monospace", fontSize: "12px", color: "var(--text-primary)" }}>
-                        {showPasswords[`domain_${asset.id}`] ? asset.domainPassword || "Not Set" : "••••••••••••"}
-                      </span>
-                      <div style={{ display: "flex", gap: "6px" }}>
-                        <button onClick={() => toggleShowPassword(`domain_${asset.id}`)} style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer" }}>
-                          {showPasswords[`domain_${asset.id}`] ? <EyeOff size={14} /> : <Eye size={14} />}
-                        </button>
-                        {asset.domainPassword && (
-                          <button onClick={() => copyToClipboard(asset.domainPassword, "Account Password")} style={{ background: "transparent", border: "none", color: "#6366f1", cursor: "pointer" }}>
-                            <Copy size={14} />
-                          </button>
-                        )}
-                      </div>
-                    </div>
+                {/* Metadata Grid */}
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "12px" }}>
+                  <div style={{ background: "var(--bg-input)", border: "1px solid var(--bg-border)", borderRadius: "10px", padding: "12px", fontSize: "12px", color: "var(--text-secondary)" }}>
+                    <strong style={{ color: "var(--text-primary)" }}>Hosting & Infrastructure:</strong>
+                    <div style={{ marginTop: "4px" }}>Provider: {asset.hostingProvider || "N/A"}</div>
+                    <div>IP/Server: {asset.hostingIp || "N/A"}</div>
+                    <div>Safe Account ID: {asset.hostingUser || "N/A"}</div>
                   </div>
 
-                  {/* Hosting & Server Vault */}
-                  <div style={{ background: "var(--bg-input)", border: "1px solid var(--bg-border)", borderRadius: "12px", padding: "16px", display: "flex", flexDirection: "column", gap: "10px" }}>
-                    <div style={{ fontSize: "12px", fontWeight: 700, color: "#059669", display: "flex", alignItems: "center", gap: "6px" }}>
-                      <Server size={16} /> Hosting & Server Vault
-                    </div>
-                    <div style={{ fontSize: "12px", color: "var(--text-secondary)" }}>
-                      <strong>Provider / IP:</strong> {asset.hostingProvider || "N/A"} {asset.hostingIp ? `(${asset.hostingIp})` : ""}
-                    </div>
-                    <div style={{ fontSize: "12px", color: "var(--text-secondary)" }}>
-                      <strong>User / SSH:</strong> <code style={{ color: "#6366f1", fontWeight: 600 }}>{asset.hostingUser || "root"}</code>
-                    </div>
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "var(--bg-card)", padding: "8px 10px", borderRadius: "6px", border: "1px solid var(--bg-border)" }}>
-                      <span style={{ fontFamily: "monospace", fontSize: "12px", color: "var(--text-primary)" }}>
-                        {showPasswords[`hosting_${asset.id}`] ? asset.hostingPassword || "Not Set" : "••••••••••••"}
-                      </span>
-                      <div style={{ display: "flex", gap: "6px" }}>
-                        <button onClick={() => toggleShowPassword(`hosting_${asset.id}`)} style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer" }}>
-                          {showPasswords[`hosting_${asset.id}`] ? <EyeOff size={14} /> : <Eye size={14} />}
-                        </button>
-                        {asset.hostingPassword && (
-                          <button onClick={() => copyToClipboard(asset.hostingPassword, "Hosting Password")} style={{ background: "transparent", border: "none", color: "#6366f1", cursor: "pointer" }}>
-                            <Copy size={14} />
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Database & API Vault */}
-                  <div style={{ background: "var(--bg-input)", border: "1px solid var(--bg-border)", borderRadius: "12px", padding: "16px", display: "flex", flexDirection: "column", gap: "10px" }}>
-                    <div style={{ fontSize: "12px", fontWeight: 700, color: "#9333ea", display: "flex", alignItems: "center", gap: "6px" }}>
-                      <Database size={16} /> Database & API Keys
-                    </div>
-                    <div style={{ fontSize: "12px", color: "var(--text-secondary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                      <strong>DB Connection:</strong> {asset.databaseUri || "N/A"}
-                    </div>
-                    <div style={{ fontSize: "12px", color: "var(--text-secondary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                      <strong>API Credentials:</strong> {asset.apiKeys || "N/A"}
-                    </div>
-                    <div style={{ display: "flex", justifyContent: "flex-end" }}>
-                      {asset.databaseUri && (
-                        <button onClick={() => copyToClipboard(asset.databaseUri, "DB URI")} style={{ background: "rgba(168,85,247,0.15)", border: "1px solid rgba(168,85,247,0.3)", color: "#9333ea", padding: "4px 10px", borderRadius: "6px", fontSize: "11px", fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: "4px" }}>
-                          <Copy size={12} /> Copy DB Connection URI
-                        </button>
-                      )}
+                  <div style={{ background: "var(--bg-input)", border: "1px solid var(--bg-border)", borderRadius: "10px", padding: "12px", fontSize: "12px", color: "var(--text-secondary)" }}>
+                    <strong style={{ color: "var(--text-primary)" }}>Bitwarden Vault Reference:</strong>
+                    <div style={{ marginTop: "4px", fontFamily: "monospace", color: "#818cf8" }}>
+                      {asset.vaultRef ? asset.vaultRef : "No Bitwarden Item ID configured"}
                     </div>
                   </div>
                 </div>
 
-                {/* Prompts & AI Specs Box */}
-                {asset.prompts && (
-                  <div style={{ background: "rgba(99, 102, 241, 0.12)", border: "1px solid rgba(99, 102, 241, 0.3)", borderRadius: "12px", padding: "14px 18px" }}>
-                    <div style={{ fontSize: "11px", fontWeight: 700, color: "#4f46e5", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: "6px", display: "flex", alignItems: "center", gap: "6px" }}>
-                      <Sparkles size={14} color="#4f46e5" /> {asset.assetType === "AGENCY" ? "Agency AI System Instructions & Master Prompts:" : "Dedicated Client AI Prompts & System Instructions:"}
-                    </div>
-                    <pre style={{ fontSize: "12px", color: "var(--text-primary)", margin: 0, fontFamily: "monospace", whiteSpace: "pre-wrap", lineHeight: "1.4" }}>
-                      {asset.prompts}
-                    </pre>
-                  </div>
-                )}
-
-                {/* External Drive & Repo Links Footer */}
+                {/* Links Footer */}
                 <div style={{ display: "flex", alignItems: "center", gap: "16px", flexWrap: "wrap", fontSize: "12px" }}>
                   {asset.figmaLink && (
                     <a href={asset.figmaLink} target="_blank" rel="noreferrer" style={{ color: "#0284c7", textDecoration: "none", display: "flex", alignItems: "center", gap: "4px", fontWeight: 600 }}>
@@ -399,12 +338,12 @@ export default function AssetsPage() {
                   )}
                   {asset.githubRepo && (
                     <a href={asset.githubRepo} target="_blank" rel="noreferrer" style={{ color: "#059669", textDecoration: "none", display: "flex", alignItems: "center", gap: "4px", fontWeight: 600 }}>
-                      <Code2 size={13} /> GitHub Source Code Repo
+                      <Code2 size={13} /> GitHub Repository
                     </a>
                   )}
                   {asset.notes && (
                     <span style={{ color: "var(--text-secondary)" }}>
-                      <strong>Note:</strong> {asset.notes}
+                      <strong>Architecture Notes:</strong> {asset.notes}
                     </span>
                   )}
                 </div>
@@ -413,7 +352,7 @@ export default function AssetsPage() {
           )}
         </div>
 
-        {/* Add/Edit Asset Modal - Portaled to document.body */}
+        {/* Modal */}
         {isModalOpen && mounted && createPortal(
           <div 
             style={{ 
@@ -437,7 +376,7 @@ export default function AssetsPage() {
               className="card-youistic animate-in" 
               style={{ 
                 width: "100%", 
-                maxWidth: "760px", 
+                maxWidth: "720px", 
                 maxHeight: "90vh", 
                 display: "flex", 
                 flexDirection: "column", 
@@ -449,130 +388,103 @@ export default function AssetsPage() {
                 overflow: "hidden" 
               }}
             >
-              {/* Header */}
               <div style={{ padding: "18px 24px", borderBottom: "1px solid var(--bg-border)", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0, background: "var(--bg-card)" }}>
-                <h3 style={{ fontSize: "18px", fontWeight: 800, color: "var(--text-primary)", margin: 0, display: "flex", alignItems: "center", gap: "8px", fontFamily: "'Space Grotesk', sans-serif" }}>
-                  <ShieldCheck size={22} color="#818cf8" /> {editingId ? "Edit Asset Vault" : "Add New Asset & Credentials Vault"}
+                <h3 style={{ fontSize: "18px", fontWeight: 800, color: "var(--text-primary)", margin: 0, display: "flex", alignItems: "center", gap: "8px" }}>
+                  <ShieldCheck size={22} color="#818cf8" /> {editingId ? "Edit Safe Asset Metadata" : "Add Asset Record & Vault Reference"}
                 </h3>
                 <button onClick={() => setIsModalOpen(false)} style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer", padding: "4px" }}>
                   <X size={20} />
                 </button>
               </div>
 
-              {/* Scrollable Form Content */}
-              <form onSubmit={handleFormSubmit} style={{ padding: "24px", overflowY: "auto", display: "flex", flexDirection: "column", gap: "20px", flex: 1 }}>
+              <form onSubmit={handleFormSubmit} style={{ padding: "24px", overflowY: "auto", display: "flex", flexDirection: "column", gap: "18px", flex: 1 }}>
                 
-                {/* SECTION 1: General Info */}
-                <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                  <div style={{ fontSize: "11px", fontWeight: 800, color: "#818cf8", textTransform: "uppercase", letterSpacing: "0.06em", display: "flex", alignItems: "center", gap: "6px" }}>
-                    <Building size={14} /> General Information & Category
-                  </div>
-
+                {/* Security Warning Box */}
+                <div style={{ background: "rgba(239, 68, 68, 0.1)", border: "1px solid rgba(239, 68, 68, 0.3)", borderRadius: "10px", padding: "10px 14px", fontSize: "12px", color: "#fca5a5", display: "flex", alignItems: "center", gap: "8px" }}>
+                  <Lock size={16} className="flex-shrink-0 text-red-400" />
                   <div>
-                    <label style={{ display: "block", fontSize: "12px", color: "var(--text-secondary)", marginBottom: "6px", fontWeight: 600 }}>Asset Category *</label>
+                    <strong>Bitwarden Vault Policy:</strong> Do not enter plaintext passwords, API secret keys, SSH private keys or DB passwords here. Store credentials securely in Bitwarden and paste the Vault Reference ID below.
+                  </div>
+                </div>
+
+                {/* Section 1 */}
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "12px" }}>
+                  <div>
+                    <label style={{ display: "block", fontSize: "12px", color: "var(--text-secondary)", marginBottom: "4px", fontWeight: 600 }}>Asset Category *</label>
                     <select name="assetType" defaultValue={selectedAsset?.assetType || activeTab} style={{ width: "100%", background: "var(--bg-input)", border: "1px solid var(--bg-border)", borderRadius: "10px", color: "var(--text-primary)", padding: "10px 12px", fontSize: "13px", outline: "none" }}>
-                      <option value="CLIENT">👥 Client Project Asset (Client Credentials & Vault)</option>
-                      <option value="AGENCY">🏢 Us / Agency Internal Asset (Internal Logins, AWS, Tools)</option>
+                      <option value="CLIENT">👥 Client Project Asset</option>
+                      <option value="AGENCY">🏢 Us / Agency Internal Asset</option>
                     </select>
                   </div>
 
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "12px" }}>
-                    <div>
-                      <label style={{ display: "block", fontSize: "12px", color: "var(--text-secondary)", marginBottom: "4px", fontWeight: 600 }}>Owner / Client Name *</label>
-                      <input required name="clientName" defaultValue={selectedAsset?.clientName || (activeTab === "AGENCY" ? "Youistic Agency (Internal)" : "")} placeholder="e.g. Hamran or Youistic Internal" style={{ width: "100%", background: "var(--bg-input)", border: "1px solid var(--bg-border)", borderRadius: "10px", color: "var(--text-primary)", padding: "10px 12px", fontSize: "13px", outline: "none" }} />
-                    </div>
-                    <div>
-                      <label style={{ display: "block", fontSize: "12px", color: "var(--text-secondary)", marginBottom: "4px", fontWeight: 600 }}>Business Name / Service Title</label>
-                      <input name="businessName" defaultValue={selectedAsset?.businessName || ""} placeholder="e.g. BHFG Luxury App or AWS Master" style={{ width: "100%", background: "var(--bg-input)", border: "1px solid var(--bg-border)", borderRadius: "10px", color: "var(--text-primary)", padding: "10px 12px", fontSize: "13px", outline: "none" }} />
-                    </div>
+                  <div>
+                    <label style={{ display: "block", fontSize: "12px", color: "var(--text-secondary)", marginBottom: "4px", fontWeight: 600 }}>Link Relational Client Account</label>
+                    <select name="clientId" defaultValue={selectedAsset?.clientId || ""} style={{ width: "100%", background: "var(--bg-input)", border: "1px solid var(--bg-border)", borderRadius: "10px", color: "var(--text-primary)", padding: "10px 12px", fontSize: "13px", outline: "none" }}>
+                      <option value="">-- No Linked Client / Agency Internal --</option>
+                      {clients.map(c => (
+                        <option key={c.id} value={c.id}>{c.companyName} ({c.contactPerson})</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "12px" }}>
+                  <div>
+                    <label style={{ display: "block", fontSize: "12px", color: "var(--text-secondary)", marginBottom: "4px", fontWeight: 600 }}>Asset Name / Title *</label>
+                    <input required name="name" defaultValue={selectedAsset?.name || selectedAsset?.businessName || ""} placeholder="e.g. Production Domain & Server" style={{ width: "100%", background: "var(--bg-input)", border: "1px solid var(--bg-border)", borderRadius: "10px", color: "var(--text-primary)", padding: "10px 12px", fontSize: "13px", outline: "none" }} />
                   </div>
 
                   <div>
-                    <label style={{ display: "block", fontSize: "12px", color: "var(--text-secondary)", marginBottom: "4px", fontWeight: 600 }}>Master Description & Scope</label>
-                    <textarea name="projectDescription" rows={3} defaultValue={selectedAsset?.projectDescription || ""} placeholder="Describe full project architecture, features, tech stack..." style={{ width: "100%", background: "var(--bg-input)", border: "1px solid var(--bg-border)", borderRadius: "10px", color: "var(--text-primary)", padding: "10px 12px", fontSize: "13px", outline: "none", resize: "vertical" }} />
+                    <label style={{ display: "block", fontSize: "12px", color: "var(--text-secondary)", marginBottom: "4px", fontWeight: 600 }}>Owner / Client Display Name</label>
+                    <input name="clientName" defaultValue={selectedAsset?.clientName || ""} placeholder="e.g. Sohail or Youistic Internal" style={{ width: "100%", background: "var(--bg-input)", border: "1px solid var(--bg-border)", borderRadius: "10px", color: "var(--text-primary)", padding: "10px 12px", fontSize: "13px", outline: "none" }} />
                   </div>
                 </div>
 
-                <hr style={{ border: "none", borderTop: "1px solid var(--bg-border)", margin: "4px 0" }} />
-
-                {/* SECTION 2: Domain & Hosting Credentials */}
-                <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                  <div style={{ fontSize: "11px", fontWeight: 800, color: "#38bdf8", textTransform: "uppercase", letterSpacing: "0.06em", display: "flex", alignItems: "center", gap: "6px" }}>
-                    <Globe size={14} /> Domain & Registrar Vault
-                  </div>
-
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "12px" }}>
-                    <div>
-                      <label style={{ display: "block", fontSize: "12px", color: "var(--text-secondary)", marginBottom: "4px", fontWeight: 600 }}>Domain / URL</label>
-                      <input name="domainName" defaultValue={selectedAsset?.domainName || ""} placeholder="e.g. bhfg.com" style={{ width: "100%", background: "var(--bg-input)", border: "1px solid var(--bg-border)", borderRadius: "10px", color: "var(--text-primary)", padding: "10px 12px", fontSize: "13px", outline: "none" }} />
-                    </div>
-                    <div>
-                      <label style={{ display: "block", fontSize: "12px", color: "var(--text-secondary)", marginBottom: "4px", fontWeight: 600 }}>Registrar / Service Login</label>
-                      <input name="domainRegistrar" defaultValue={selectedAsset?.domainRegistrar || ""} placeholder="GoDaddy / Cloudflare" style={{ width: "100%", background: "var(--bg-input)", border: "1px solid var(--bg-border)", borderRadius: "10px", color: "var(--text-primary)", padding: "10px 12px", fontSize: "13px", outline: "none" }} />
-                    </div>
-                    <div>
-                      <label style={{ display: "block", fontSize: "12px", color: "var(--text-secondary)", marginBottom: "4px", fontWeight: 600 }}>Account Password</label>
-                      <input name="domainPassword" defaultValue={selectedAsset?.domainPassword || ""} placeholder="Account password" style={{ width: "100%", background: "var(--bg-input)", border: "1px solid var(--bg-border)", borderRadius: "10px", color: "var(--text-primary)", padding: "10px 12px", fontSize: "13px", outline: "none", fontFamily: "monospace" }} />
-                    </div>
+                {/* Vault Reference Input */}
+                <div style={{ background: "rgba(99,102,241,0.08)", border: "1px solid rgba(99,102,241,0.2)", borderRadius: "12px", padding: "14px" }}>
+                  <label style={{ display: "block", fontSize: "12px", color: "#818cf8", marginBottom: "4px", fontWeight: 700 }}>Bitwarden / Vault Reference ID</label>
+                  <input name="vaultRef" defaultValue={selectedAsset?.vaultRef || ""} placeholder="e.g. bw-item-98a72b-lawyours-production" style={{ width: "100%", background: "var(--bg-input)", border: "1px solid var(--bg-border)", borderRadius: "10px", color: "var(--text-primary)", padding: "10px 12px", fontSize: "13px", outline: "none", fontFamily: "monospace" }} />
+                  <div style={{ fontSize: "11px", color: "var(--text-secondary)", marginTop: "4px" }}>
+                    Reference pointer to the secret item stored securely in Bitwarden vault.
                   </div>
                 </div>
 
-                <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                  <div style={{ fontSize: "11px", fontWeight: 800, color: "#34d399", textTransform: "uppercase", letterSpacing: "0.06em", display: "flex", alignItems: "center", gap: "6px" }}>
-                    <Server size={14} /> Hosting & Cloud Infrastructure
-                  </div>
-
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "12px" }}>
-                    <div>
-                      <label style={{ display: "block", fontSize: "12px", color: "var(--text-secondary)", marginBottom: "4px", fontWeight: 600 }}>Hosting Provider</label>
-                      <input name="hostingProvider" defaultValue={selectedAsset?.hostingProvider || ""} placeholder="AWS / Vercel / DigitalOcean" style={{ width: "100%", background: "var(--bg-input)", border: "1px solid var(--bg-border)", borderRadius: "10px", color: "var(--text-primary)", padding: "10px 12px", fontSize: "13px", outline: "none" }} />
-                    </div>
-                    <div>
-                      <label style={{ display: "block", fontSize: "12px", color: "var(--text-secondary)", marginBottom: "4px", fontWeight: 600 }}>Server IP / SSH User</label>
-                      <input name="hostingIp" defaultValue={selectedAsset?.hostingIp || ""} placeholder="13.232.110.45 (ubuntu)" style={{ width: "100%", background: "var(--bg-input)", border: "1px solid var(--bg-border)", borderRadius: "10px", color: "var(--text-primary)", padding: "10px 12px", fontSize: "13px", outline: "none" }} />
-                    </div>
-                    <div>
-                      <label style={{ display: "block", fontSize: "12px", color: "var(--text-secondary)", marginBottom: "4px", fontWeight: 600 }}>Hosting Pass / SSH Key</label>
-                      <input name="hostingPassword" defaultValue={selectedAsset?.hostingPassword || ""} placeholder="SSH / Hosting pass" style={{ width: "100%", background: "var(--bg-input)", border: "1px solid var(--bg-border)", borderRadius: "10px", color: "var(--text-primary)", padding: "10px 12px", fontSize: "13px", outline: "none", fontFamily: "monospace" }} />
-                    </div>
-                  </div>
-                </div>
-
-                <hr style={{ border: "none", borderTop: "1px solid var(--bg-border)", margin: "4px 0" }} />
-
-                {/* SECTION 3: DB & AI System Instructions */}
-                <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                  <div style={{ fontSize: "11px", fontWeight: 800, color: "#c084fc", textTransform: "uppercase", letterSpacing: "0.06em", display: "flex", alignItems: "center", gap: "6px" }}>
-                    <Database size={14} /> Database URI & AI Instructions
-                  </div>
-
+                {/* Safe Technical Metadata */}
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "12px" }}>
                   <div>
-                    <label style={{ display: "block", fontSize: "12px", color: "var(--text-secondary)", marginBottom: "4px", fontWeight: 600 }}>Database Connection URI</label>
-                    <input name="databaseUri" defaultValue={selectedAsset?.databaseUri || ""} placeholder="postgresql://user:pass@host:5432/dbname" style={{ width: "100%", background: "var(--bg-input)", border: "1px solid var(--bg-border)", borderRadius: "10px", color: "var(--text-primary)", padding: "10px 12px", fontSize: "13px", outline: "none", fontFamily: "monospace" }} />
+                    <label style={{ display: "block", fontSize: "12px", color: "var(--text-secondary)", marginBottom: "4px", fontWeight: 600 }}>Domain Name</label>
+                    <input name="domainName" defaultValue={selectedAsset?.domainName || ""} placeholder="e.g. lawyours.in" style={{ width: "100%", background: "var(--bg-input)", border: "1px solid var(--bg-border)", borderRadius: "10px", color: "var(--text-primary)", padding: "10px 12px", fontSize: "13px", outline: "none" }} />
                   </div>
-
                   <div>
-                    <label style={{ display: "block", fontSize: "12px", color: "var(--text-secondary)", marginBottom: "4px", fontWeight: 600 }}>Prompts & AI Agent System Instructions</label>
-                    <textarea name="prompts" rows={3} defaultValue={selectedAsset?.prompts || ""} placeholder="System Prompt instructions, AI agent guidelines..." style={{ width: "100%", background: "var(--bg-input)", border: "1px solid var(--bg-border)", borderRadius: "10px", color: "var(--text-primary)", padding: "10px 12px", fontSize: "13px", outline: "none", resize: "vertical", fontFamily: "monospace" }} />
+                    <label style={{ display: "block", fontSize: "12px", color: "var(--text-secondary)", marginBottom: "4px", fontWeight: 600 }}>Hosting Provider</label>
+                    <input name="hostingProvider" defaultValue={selectedAsset?.hostingProvider || ""} placeholder="Vercel / AWS" style={{ width: "100%", background: "var(--bg-input)", border: "1px solid var(--bg-border)", borderRadius: "10px", color: "var(--text-primary)", padding: "10px 12px", fontSize: "13px", outline: "none" }} />
                   </div>
-
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "12px" }}>
-                    <div>
-                      <label style={{ display: "block", fontSize: "12px", color: "var(--text-secondary)", marginBottom: "4px", fontWeight: 600 }}>Figma Link</label>
-                      <input name="figmaLink" defaultValue={selectedAsset?.figmaLink || ""} placeholder="https://figma.com/file/..." style={{ width: "100%", background: "var(--bg-input)", border: "1px solid var(--bg-border)", borderRadius: "10px", color: "var(--text-primary)", padding: "10px 12px", fontSize: "13px", outline: "none" }} />
-                    </div>
-                    <div>
-                      <label style={{ display: "block", fontSize: "12px", color: "var(--text-secondary)", marginBottom: "4px", fontWeight: 600 }}>GitHub Repo URL</label>
-                      <input name="githubRepo" defaultValue={selectedAsset?.githubRepo || ""} placeholder="https://github.com/youistic/..." style={{ width: "100%", background: "var(--bg-input)", border: "1px solid var(--bg-border)", borderRadius: "10px", color: "var(--text-primary)", padding: "10px 12px", fontSize: "13px", outline: "none" }} />
-                    </div>
+                  <div>
+                    <label style={{ display: "block", fontSize: "12px", color: "var(--text-secondary)", marginBottom: "4px", fontWeight: 600 }}>Safe Username / Account ID</label>
+                    <input name="hostingUser" defaultValue={selectedAsset?.hostingUser || ""} placeholder="admin@lawyours.in" style={{ width: "100%", background: "var(--bg-input)", border: "1px solid var(--bg-border)", borderRadius: "10px", color: "var(--text-primary)", padding: "10px 12px", fontSize: "13px", outline: "none" }} />
                   </div>
                 </div>
 
-                {/* Sticky Pinned Modal Footer */}
-                <div style={{ position: "sticky", bottom: 0, background: "var(--bg-card)", marginTop: "12px", borderTop: "1px solid var(--bg-border)", paddingTop: "14px", display: "flex", justifyContent: "flex-end", gap: "12px", zIndex: 10 }}>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "12px" }}>
+                  <div>
+                    <label style={{ display: "block", fontSize: "12px", color: "var(--text-secondary)", marginBottom: "4px", fontWeight: 600 }}>Figma Design URL</label>
+                    <input name="figmaLink" defaultValue={selectedAsset?.figmaLink || ""} placeholder="https://figma.com/..." style={{ width: "100%", background: "var(--bg-input)", border: "1px solid var(--bg-border)", borderRadius: "10px", color: "var(--text-primary)", padding: "10px 12px", fontSize: "13px", outline: "none" }} />
+                  </div>
+                  <div>
+                    <label style={{ display: "block", fontSize: "12px", color: "var(--text-secondary)", marginBottom: "4px", fontWeight: 600 }}>GitHub Repository URL</label>
+                    <input name="githubRepo" defaultValue={selectedAsset?.githubRepo || ""} placeholder="https://github.com/youistic/..." style={{ width: "100%", background: "var(--bg-input)", border: "1px solid var(--bg-border)", borderRadius: "10px", color: "var(--text-primary)", padding: "10px 12px", fontSize: "13px", outline: "none" }} />
+                  </div>
+                </div>
+
+                <div>
+                  <label style={{ display: "block", fontSize: "12px", color: "var(--text-secondary)", marginBottom: "4px", fontWeight: 600 }}>Architecture Notes (Non-Secret Metadata Only)</label>
+                  <textarea name="notes" rows={3} defaultValue={selectedAsset?.notes || ""} placeholder="Safe operational & architecture notes only..." style={{ width: "100%", background: "var(--bg-input)", border: "1px solid var(--bg-border)", borderRadius: "10px", color: "var(--text-primary)", padding: "10px 12px", fontSize: "13px", outline: "none", resize: "vertical" }} />
+                </div>
+
+                <div style={{ position: "sticky", bottom: 0, background: "var(--bg-card)", marginTop: "8px", borderTop: "1px solid var(--bg-border)", paddingTop: "14px", display: "flex", justifyContent: "flex-end", gap: "12px", zIndex: 10 }}>
                   <button type="button" onClick={() => setIsModalOpen(false)} style={{ padding: "10px 18px", background: "var(--bg-input)", border: "1px solid var(--bg-border)", borderRadius: "10px", color: "var(--text-primary)", fontWeight: 600, cursor: "pointer" }}>Cancel</button>
-                  <button type="submit" disabled={isSubmitting} style={{ padding: "10px 22px", background: activeTab === "CLIENT" ? "linear-gradient(135deg, #6366f1 0%, #4338ca 100%)" : "linear-gradient(135deg, #a855f7 0%, #7e22ce 100%)", border: "none", borderRadius: "10px", color: "white", fontWeight: 700, cursor: "pointer" }}>
-                    {isSubmitting ? "Saving Vault..." : "Save Asset Vault"}
+                  <button type="submit" disabled={isSubmitting} style={{ padding: "10px 22px", background: "linear-gradient(135deg, #10b981 0%, #059669 100%)", border: "none", borderRadius: "10px", color: "white", fontWeight: 700, cursor: "pointer" }}>
+                    {isSubmitting ? "Saving Metadata..." : "Save Asset Metadata"}
                   </button>
                 </div>
               </form>

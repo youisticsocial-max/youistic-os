@@ -601,15 +601,63 @@ export default function Client360Page({ params }: Client360PageProps) {
             <div className="flex items-center justify-between border-b border-slate-800 pb-3">
               <h3 className="text-sm font-bold text-slate-200 flex items-center gap-2">
                 <Lock size={16} className="text-emerald-400" />
-                Safe Asset Metadata (Strict Secret Redaction)
+                Safe Asset Metadata (Vault Reference & Architecture Scope)
               </h3>
               <span className="text-[11px] text-emerald-400 bg-emerald-950/60 border border-emerald-800/40 px-2.5 py-0.5 rounded-full font-medium">
                 Plaintext Passwords & API Secrets Masked
               </span>
             </div>
-            <div className="text-center py-12 text-slate-500 text-xs">
-              No linked asset metadata stored for this client.
-            </div>
+
+            {client.assets && client.assets.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+                {client.assets.map((asset: any) => (
+                  <div key={asset.id} className="bg-[#0b0d14] border border-slate-800/80 rounded-xl p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="font-semibold text-slate-200 text-sm">
+                        {asset.name || asset.domainName || "Asset Record"}
+                      </div>
+                      {asset.vaultRef ? (
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-indigo-950/80 text-indigo-300 border border-indigo-700/50 flex items-center gap-1">
+                          🔒 Vault Ref Configured
+                        </span>
+                      ) : (
+                        <span className="text-[10px] font-medium px-2 py-0.5 rounded-md bg-slate-800/60 text-slate-400">
+                          No Vault Ref
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="text-xs text-slate-400 space-y-1">
+                      {asset.domainName && (
+                        <div><strong className="text-slate-300">Domain:</strong> {asset.domainName} ({asset.domainRegistrar || "Registrar N/A"})</div>
+                      )}
+                      {asset.hostingProvider && (
+                        <div><strong className="text-slate-300">Hosting:</strong> {asset.hostingProvider} {asset.hostingIp ? `(${asset.hostingIp})` : ""}</div>
+                      )}
+                      {asset.hostingUser && (
+                        <div><strong className="text-slate-300">Safe Account ID:</strong> {asset.hostingUser}</div>
+                      )}
+                      {asset.vaultRef && (
+                        <div className="font-mono text-[11px] text-indigo-400 truncate">
+                          <strong className="text-slate-300">Vault Item ID:</strong> {asset.vaultRef}
+                        </div>
+                      )}
+                    </div>
+
+                    {asset.notes && (
+                      <div className="text-[11px] text-slate-400 bg-slate-900/60 border border-slate-800 rounded-lg p-2.5">
+                        <span className="font-semibold text-slate-300 block mb-1">Architecture Notes:</span>
+                        {asset.notes}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-12 text-slate-500 text-xs">
+                No linked asset metadata stored for this client.
+              </div>
+            )}
           </div>
         )}
 
