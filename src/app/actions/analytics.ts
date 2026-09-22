@@ -79,8 +79,10 @@ export async function getAnalyticsData(params?: {
       }
     }
 
-    // Actual Receipts Received
-    const totalPaymentsReceived = client.revenueEntries.reduce((acc, r) => acc + Number(r.amount), 0);
+    // Actual Receipts Received (PAID entries only)
+    const totalPaymentsReceived = client.revenueEntries
+      .filter((r) => r.paymentStatus === "PAID")
+      .reduce((acc, r) => acc + Number(r.amount), 0);
 
     // Receivables Calculation
     const totalInvoiced = client.invoices.reduce((acc, inv) => acc + Number(inv.amount), 0);
@@ -162,14 +164,16 @@ export async function getAnalyticsData(params?: {
     }
   }
 
-  const totalRevenueReceived = allRevenues.reduce((acc, r) => {
-    const val = Number(r.amount);
-    const family = r.clientService?.offering?.family;
-    if (family && familyBreakdown[family]) {
-      familyBreakdown[family].revenueReceived += val;
-    }
-    return acc + val;
-  }, 0);
+  const totalRevenueReceived = allRevenues
+    .filter((r) => r.paymentStatus === "PAID")
+    .reduce((acc, r) => {
+      const val = Number(r.amount);
+      const family = r.clientService?.offering?.family;
+      if (family && familyBreakdown[family]) {
+        familyBreakdown[family].revenueReceived += val;
+      }
+      return acc + val;
+    }, 0);
 
   const totalOutstandingReceivables = allInvoices
     .filter((inv) => inv.status === "ISSUED" || inv.status === "OVERDUE")
