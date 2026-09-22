@@ -17,6 +17,7 @@ import {
   PhoneCall,
   MapPin,
   ShieldCheck,
+  Package,
   X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -84,6 +85,12 @@ const navItems = [
         href: "/dashboard/renewals",
         icon: Zap,
         color: "#10b981",
+      },
+      {
+        label: "Service Catalogue 📦",
+        href: "/dashboard/services",
+        icon: Package,
+        color: "#6c5ce7",
       },
     ],
   },
