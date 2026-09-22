@@ -362,3 +362,33 @@ Final Correction HEAD: `95b4cb1` (pushed to `origin/feature/overnight-hardening-
 ### Final Correction Verdict:
 A. OVERNIGHT BRANCH CORRECTED — READY FOR FINAL DEPLOYMENT REVIEW
 
+## CONTROLLED PRODUCTION DEPLOYMENT
+
+Timestamp: 2026-09-22T12:42:00+05:30
+Pre-deploy main: `095b60ccaa6ab0caeb133151e9648585a725bf25`
+Feature HEAD: `7590229132ecb613250648d4b3db1db0fe51b3dc`
+Merged main SHA: `7590229132ecb613250648d4b3db1db0fe51b3dc`
+Production URL: https://youistic.store
+Vercel Deployment Status: READY / SUCCESS (`7590229132ecb613250648d4b3db1db0fe51b3dc`)
+
+### Deployment Summary:
+- **Deployment Type:** CODE-ONLY (Zero schema migrations, zero DB push)
+- **Fast-Forward Merge:** Merged `feature/overnight-hardening-20260922` cleanly into `main` and pushed to `origin/main`.
+- **Smoke Tests Verified:**
+  - Auth smoke: PASS (`requireRole` guards active across all actions)
+  - CEO Dashboard smoke: PASS (Current-month revenue filter active, fake growth badges purged)
+  - Projects smoke: PASS (SDR denied from Projects/Delivery, BDE IDOR checks active)
+  - Finance smoke: PASS (`isPositiveFiniteAmount` validation and BDE IDOR guards active)
+  - Support smoke: PASS (DB-level `where` scoping active)
+  - Team smoke: PASS (Factually labeled `"Assigned Client Contract Value"`)
+  - Client Delete safety code: PASS (`prisma.$transaction` atomic cascade active)
+- **Regression Status:** NONE across Phase 1, 2A, 2B, 2C, 2D, 2E, 2F, 2G.
+- **Production Errors:** NONE
+- **Production Business Records Edited for Testing:** NO
+- **Production DB Mutated:** NO
+- **wa-crm Touched:** NO
+
+### Final Deployment Verdict:
+A. OVERNIGHT HARDENING LIVE — PASS
+
+
