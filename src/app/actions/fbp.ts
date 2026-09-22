@@ -34,6 +34,17 @@ export async function createFbpContentItem(data: {
     }
   }
 
+  // Cross-client service check
+  if (data.clientServiceId) {
+    const service = await prisma.clientService.findUnique({
+      where: { id: data.clientServiceId },
+      select: { clientId: true },
+    });
+    if (!service || service.clientId !== data.clientId) {
+      throw new Error("CROSS_CLIENT_SERVICE_MISMATCH: The selected service does not belong to the specified client.");
+    }
+  }
+
   try {
     const item = await prisma.fbpContentItem.create({
       data: {
