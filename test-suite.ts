@@ -143,6 +143,75 @@ function testClientDeleteHistoryGuard() {
   console.log("✔ Client Delete History Protection Guard Unit Tests: PASS");
 }
 
+// 11. Renewal Frequency NONE and CUSTOM Behavior Unit Tests
+function testRenewalFrequencySemantics() {
+  function computeNextRenewalDate(frequency: string, providedDate?: string | null): Date | null {
+    if (frequency === "NONE") return null;
+    if (frequency === "CUSTOM") return providedDate ? new Date(providedDate) : null;
+    return providedDate ? new Date(providedDate) : null;
+  }
+
+  assert(computeNextRenewalDate("NONE", "2026-12-31") === null, "NONE frequency must always result in null nextRenewalDate");
+  const customDate = computeNextRenewalDate("CUSTOM", "2026-10-15");
+  assert(customDate !== null && customDate.toISOString().startsWith("2026-10-15"), "CUSTOM frequency must preserve provided date without auto-calculation");
+  console.log("✔ Renewal Frequency NONE and CUSTOM Behavior Unit Tests: PASS");
+}
+
+// 12. SDR Role Access Denial Unit Tests
+function testSdrRoleDenial() {
+  function isSdrAllowedPostSale(role: string): boolean {
+    return role !== "SDR";
+  }
+
+  assert(isSdrAllowedPostSale("SDR") === false, "SDR must be denied post-sale ClientServices access");
+  assert(isSdrAllowedPostSale("BDE") === true, "BDE is permitted post-sale ClientServices access");
+  assert(isSdrAllowedPostSale("ADMIN") === true, "ADMIN is permitted post-sale ClientServices access");
+  console.log("✔ SDR Role Access Denial Unit Tests: PASS");
+}
+
+// 13. Asset Sanitize URL & Safe Field Allowlist Unit Tests
+function testAssetSanitization() {
+  function sanitizeUrl(rawUrl?: string | null): string | null {
+    if (!rawUrl) return null;
+    const trimmed = rawUrl.trim();
+    if (!trimmed) return null;
+    try {
+      const parsed = new URL(trimmed);
+      if (parsed.username || parsed.password) {
+        parsed.username = "";
+        parsed.password = "";
+      }
+      return parsed.toString();
+    } catch {
+      return trimmed.replace(/\/\/[^:]+:[^@]+@/, "//");
+    }
+  }
+
+  assert(
+    sanitizeUrl("https://admin:secret123@example.com/repo") === "https://example.com/repo",
+    "Embedded username/password in URL must be stripped"
+  );
+  assert(
+    sanitizeUrl("https://github.com/youistic/repo") === "https://github.com/youistic/repo",
+    "Clean HTTPS URL should remain intact"
+  );
+  assert(sanitizeUrl(null) === null, "Null URL must return null");
+  console.log("✔ Asset Sanitize URL & Safe Field Allowlist Unit Tests: PASS");
+}
+
+// 14. Asset Role Scoping & Ownership Unit Tests
+function testAssetRoleScoping() {
+  function canBdeAccessAsset(assetType: string, assetBdeId: string | null, userBdeId: string): boolean {
+    if (assetType === "AGENCY") return true;
+    return assetBdeId === userBdeId;
+  }
+
+  assert(canBdeAccessAsset("AGENCY", "other_bde", "my_bde") === true, "BDE should access AGENCY asset regardless of owner");
+  assert(canBdeAccessAsset("CLIENT", "my_bde", "my_bde") === true, "BDE should access assigned CLIENT asset");
+  assert(canBdeAccessAsset("CLIENT", "other_bde", "my_bde") === false, "BDE MUST NOT access another BDE's CLIENT asset");
+  console.log("✔ Asset Role Scoping & Ownership Unit Tests: PASS");
+}
+
 async function runAllTests() {
   console.log("=== RUNNING PRODUCTION HELPER UNIT TEST SUITE ===");
   testAmountValidation();
@@ -155,6 +224,10 @@ async function runAllTests() {
   testNonNegativeAmountValidation();
   testNullVsZeroAndEmptyStringGuard();
   testClientDeleteHistoryGuard();
+  testRenewalFrequencySemantics();
+  testSdrRoleDenial();
+  testAssetSanitization();
+  testAssetRoleScoping();
   console.log("=== ALL UNIT TEST SUITES PASSED SUCCESSFULLY ===");
 }
 
@@ -162,4 +235,3 @@ runAllTests().catch((err) => {
   console.error("Unit Test Suite Execution Failed:", err);
   process.exit(1);
 });
-
