@@ -17,6 +17,7 @@ interface TeamMember {
   department: string;
   phone: string;
   dealsClosedCount: number;
+  assignedContractValue?: number;
   revenueGenerated: number;
   closingRatio: number;
   tasksCompleted: number;
@@ -356,12 +357,12 @@ export default function TeamPage() {
                       </span>
                     </div>
 
-                    {/* Middle Row: Live DSR Activity Badge */}
+                    {/* Middle Row: Live DSR Activity Badge & Assigned Client Contract Value */}
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "var(--bg-input)", border: "1px solid var(--bg-border)", borderRadius: "8px", padding: "6px 10px" }}>
                       <span style={{ fontSize: "11px", fontWeight: 600, color: "var(--text-primary)" }}>{m.activityLabel}</span>
-                      {m.revenueGenerated > 0 && (
-                        <span style={{ fontSize: "11px", fontWeight: 700, color: "#059669" }}>
-                          {formatCurrency(m.revenueGenerated)}
+                      {(m.assignedContractValue || m.revenueGenerated || 0) > 0 && (
+                        <span style={{ fontSize: "11px", fontWeight: 700, color: "#00cec9" }} title="Assigned Client Contract Value">
+                          {formatCurrency(m.assignedContractValue || m.revenueGenerated)}
                         </span>
                       )}
                     </div>

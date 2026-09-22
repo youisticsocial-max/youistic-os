@@ -77,8 +77,8 @@ export async function getTeamMembers() {
       const convertedCount = sdrLeads.filter((l: any) => l.status === "CONVERTED").length;
 
       let activityLabel = "Active Member";
-      // Calculate real factual revenue generated from assigned clients' contract values
-      const revenue = bdeClients.reduce((sum: number, c: any) => sum + (c.contractValue || 0), 0);
+      // Calculate factual total contract value from assigned clients (Client.contractValue)
+      const assignedContractValue = bdeClients.reduce((sum: number, c: any) => sum + (c.contractValue || 0), 0);
       const closingRatio = totalLeads > 0 ? Math.round((convertedCount / totalLeads) * 100) : 0;
 
       if (u.role === UserRole.ADMIN) {
@@ -103,7 +103,8 @@ export async function getTeamMembers() {
         department: u.department || u.role,
         phone: u.phone || "+91 98765 43210",
         dealsClosedCount: convertedCount,
-        revenueGenerated: revenue,
+        assignedContractValue,
+        revenueGenerated: assignedContractValue,
         closingRatio: closingRatio,
         tasksCompleted: totalLeads,
         leadsGenerated: totalLeads,
