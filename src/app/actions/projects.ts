@@ -3,15 +3,14 @@
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { requireRole } from "@/lib/auth";
+import { canRoleAccessProjects, isBdeClientAuthorized, isValidNonEmptyString } from "@/lib/validation";
 
 export async function getProjects() {
-  const session = await requireRole(["ADMIN", "BDE", "SDR"]);
+  const session = await requireRole(["ADMIN", "BDE"]);
   try {
     let whereClause: any = {};
     if (session.role === "BDE") {
       whereClause = { client: { assignedBdeId: session.userId } };
-    } else if (session.role === "SDR") {
-      whereClause = { client: { lead: { assignedSdrId: session.userId } } };
     }
 
     const projects = await prisma.project.findMany({
@@ -69,10 +68,10 @@ export async function createProject(data: {
   description?: string;
 }) {
   const session = await requireRole(["ADMIN", "BDE"]);
-  if (!data.name || typeof data.name !== "string" || !data.name.trim()) {
+  if (!isValidNonEmptyString(data.name)) {
     throw new Error("INVALID_INPUT: Project name is required.");
   }
-  if (!data.clientId || typeof data.clientId !== "string") {
+  if (!isValidNonEmptyString(data.clientId)) {
     throw new Error("INVALID_INPUT: Valid clientId is required.");
   }
 
@@ -82,7 +81,7 @@ export async function createProject(data: {
       where: { id: data.clientId },
       select: { assignedBdeId: true },
     });
-    if (!client || client.assignedBdeId !== session.userId) {
+    if (!client || !isBdeClientAuthorized(client.assignedBdeId, session.userId, session.role)) {
       throw new Error("FORBIDDEN: You can only create projects for clients assigned to you.");
     }
   }
@@ -107,7 +106,7 @@ export async function createProject(data: {
 
 export async function updateProjectStatus(id: string, status: "PLANNING" | "IN_PROGRESS" | "REVIEW" | "DELIVERED") {
   const session = await requireRole(["ADMIN", "BDE"]);
-  if (!id || typeof id !== "string") {
+  if (!isValidNonEmptyString(id)) {
     throw new Error("INVALID_INPUT: Valid project id is required.");
   }
 
@@ -117,7 +116,7 @@ export async function updateProjectStatus(id: string, status: "PLANNING" | "IN_P
       where: { id },
       select: { client: { select: { assignedBdeId: true } } },
     });
-    if (!project || project.client?.assignedBdeId !== session.userId) {
+    if (!project || !isBdeClientAuthorized(project.client?.assignedBdeId, session.userId, session.role)) {
       throw new Error("FORBIDDEN: You can only update status for projects assigned to you.");
     }
   }
@@ -141,12 +140,22 @@ export async function createTask(data: {
   stage?: "TODO" | "IN_PROGRESS" | "REVIEW" | "DONE";
   priority?: "LOW" | "MEDIUM" | "HIGH" | "URGENT";
 }) {
-  await requireRole(["ADMIN", "BDE", "SDR"]);
-  if (!data.title || typeof data.title !== "string" || !data.title.trim()) {
+  const session = await requireRole(["ADMIN", "BDE"]);
+  if (!isValidNonEmptyString(data.title)) {
     throw new Error("INVALID_INPUT: Task title is required.");
   }
-  if (!data.projectId || typeof data.projectId !== "string") {
+  if (!isValidNonEmptyString(data.projectId)) {
     throw new Error("INVALID_INPUT: Valid projectId is required.");
+  }
+
+  if (session.role === "BDE") {
+    const project = await prisma.project.findUnique({
+      where: { id: data.projectId },
+      select: { client: { select: { assignedBdeId: true } } },
+    });
+    if (!project || !isBdeClientAuthorized(project.client?.assignedBdeId, session.userId, session.role)) {
+      throw new Error("FORBIDDEN: You can only create tasks for projects assigned to you.");
+    }
   }
 
   try {
@@ -167,10 +176,21 @@ export async function createTask(data: {
 }
 
 export async function updateTaskStage(id: string, stage: "TODO" | "IN_PROGRESS" | "REVIEW" | "DONE") {
-  await requireRole(["ADMIN", "BDE", "SDR"]);
-  if (!id || typeof id !== "string") {
+  const session = await requireRole(["ADMIN", "BDE"]);
+  if (!isValidNonEmptyString(id)) {
     throw new Error("INVALID_INPUT: Valid task id is required.");
   }
+
+  if (session.role === "BDE") {
+    const task = await prisma.task.findUnique({
+      where: { id },
+      select: { project: { select: { client: { select: { assignedBdeId: true } } } } },
+    });
+    if (!task || !isBdeClientAuthorized(task.project?.client?.assignedBdeId, session.userId, session.role)) {
+      throw new Error("FORBIDDEN: You can only update tasks for projects assigned to you.");
+    }
+  }
+
   try {
     const updated = await prisma.task.update({
       where: { id },
@@ -185,10 +205,21 @@ export async function updateTaskStage(id: string, stage: "TODO" | "IN_PROGRESS" 
 }
 
 export async function deleteTask(id: string) {
-  await requireRole(["ADMIN", "BDE"]);
-  if (!id || typeof id !== "string") {
+  const session = await requireRole(["ADMIN", "BDE"]);
+  if (!isValidNonEmptyString(id)) {
     throw new Error("INVALID_INPUT: Valid task id is required.");
   }
+
+  if (session.role === "BDE") {
+    const task = await prisma.task.findUnique({
+      where: { id },
+      select: { project: { select: { client: { select: { assignedBdeId: true } } } } },
+    });
+    if (!task || !isBdeClientAuthorized(task.project?.client?.assignedBdeId, session.userId, session.role)) {
+      throw new Error("FORBIDDEN: You can only delete tasks for projects assigned to you.");
+    }
+  }
+
   try {
     await prisma.task.delete({ where: { id } });
     try { revalidatePath("/dashboard/projects"); } catch {}
