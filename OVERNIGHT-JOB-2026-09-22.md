@@ -319,3 +319,46 @@ Each commit is an isolated logical fix. If any commit needs to be reverted, run 
 ```
 FINAL NIGHT VERDICT: A. NIGHT BATCH COMPLETE — READY FOR MORNING REVIEW
 ```
+
+## MORNING CORRECTION PASS
+
+Timestamp: 2026-09-22T11:53:00+05:30
+Branch: `feature/overnight-hardening-20260922`
+Starting Correction HEAD: `ae6bd20a58142632867d6286c5bed13df997fe81`
+Final Correction HEAD: `95b4cb1` (pushed to `origin/feature/overnight-hardening-20260922`)
+
+### Locked Owner Decisions Applied:
+1. **SDR Project Access:** Denied SDR role from all Projects/Delivery actions (`getProjects`, `createProject`, `updateProjectStatus`, `createTask`, `updateTaskStage`, `deleteTask`). Removed invented `client.lead.assignedSdrId` filter rule.
+2. **Team Contract Value Metric:** Re-labeled `Client.contractValue` metric in Team UI as `"Assigned Client Contract Value"`. Exposed property `assignedContractValue` in `team.ts`.
+3. **Test Foundation Extraction:** Extracted pure validation & authorization helpers into `src/lib/validation.ts`. Refactored `test-suite.ts` to import production helpers directly.
+
+### Correction Pass Summary:
+- **Correction 1 (Projects SDR Access):**
+  - Problem: Overnight commit invented SDR project scoping rule.
+  - Decision: Deny SDR role by default.
+  - Implementation: Set `requireRole(["ADMIN", "BDE"])` across all projects and tasks server actions in `src/app/actions/projects.ts`.
+  - Files: `src/app/actions/projects.ts`, `src/lib/validation.ts`
+  - Commit: `10baef5` - `fix(projects): remove unapproved SDR project access and enforce BDE IDOR guards`
+- **Correction 2 (Team Contract Value Labeling):**
+  - Problem: `Client.contractValue` sum was exposed as revenue.
+  - Decision: Factually label as `"Assigned Client Contract Value"`.
+  - Implementation: Exported `assignedContractValue` in `src/app/actions/team.ts` and updated Team UI in `src/app/dashboard/team/page.tsx`.
+  - Files: `src/app/actions/team.ts`, `src/app/dashboard/team/page.tsx`
+  - Commit: `2b1eb61` - `fix(team): label contract value factually as Assigned Client Contract Value`
+- **Correction 3 (Test Suite Production Helpers):**
+  - Problem: `test-suite.ts` duplicated assertions locally.
+  - Decision: Test actual shared production helpers exported from `src/lib/validation.ts`.
+  - Implementation: `test-suite.ts` imports and tests `isPositiveFiniteAmount`, `canRoleAccessProjects`, `isBdeClientAuthorized`, and `isValidNonEmptyString`.
+  - Files: `src/app/actions/finance.ts`, `test-suite.ts`
+  - Commit: `95b4cb1` - `test(core): test production-used validation helpers directly`
+
+### Final Quality Gate Results:
+- `npx prisma generate`: **PASS**
+- `npx tsc --noEmit`: **PASS** (0 errors)
+- `npm run build`: **PASS**
+- `npx tsx test-suite.ts`: **PASS** (All production helper unit tests passed)
+- `npx prisma migrate status`: Database schema up to date (0 new migrations, 7 baseline migrations applied).
+
+### Final Correction Verdict:
+A. OVERNIGHT BRANCH CORRECTED — READY FOR FINAL DEPLOYMENT REVIEW
+
