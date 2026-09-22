@@ -170,7 +170,7 @@ export default function ServiceCataloguePage() {
     return true;
   });
 
-  const isAdmin = userRole === "ADMIN" || userRole === "CEO";
+  const isAdmin = userRole === "ADMIN";
 
   return (
     <div className="min-h-screen bg-[#090b10] text-slate-100">

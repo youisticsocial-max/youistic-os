@@ -314,7 +314,7 @@ export default function FinancePage() {
             <div style={{ fontSize: "12px", color: "var(--text-muted)", marginTop: "2px" }}>Total Expenses</div>
           </div>
 
-          {/* Card 4: Net Profit */}
+          {/* Card 4: Net Cash After Expenses */}
           <div className="card-youistic" style={{ padding: "18px" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
               <div style={{ width: "36px", height: "36px", borderRadius: "10px", background: "rgba(108,92,231,0.12)", display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -323,7 +323,7 @@ export default function FinancePage() {
               <span style={{ fontSize: "10px", color: "var(--text-muted)", background: "var(--bg-border)", padding: "2px 6px", borderRadius: "4px" }}>Realized</span>
             </div>
             <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: "clamp(18px, 3.5vw, 24px)", fontWeight: 800, color: "var(--text-primary)" }}>{formatCurrency(thisMonth.profit)}</div>
-            <div style={{ fontSize: "12px", color: "var(--text-muted)", marginTop: "2px" }}>Realized Cash Profit</div>
+            <div style={{ fontSize: "12px", color: "var(--text-muted)", marginTop: "2px" }}>Net Cash After Expenses</div>
           </div>
 
           {/* Card 5: ROI % */}
@@ -342,8 +342,8 @@ export default function FinancePage() {
         {/* Profit & Loss Chart Row */}
         <div className="finance-chart-row" style={{ display: "grid", gridTemplateColumns: "3fr 1fr", gap: "16px" }}>
           <div className="card-youistic" style={{ padding: "24px" }}>
-            <div className="section-title" style={{ fontSize: "16px", color: "var(--text-primary)" }}>Profit & Loss (Realized)</div>
-            <div style={{ fontSize: "12px", color: "var(--text-secondary)", marginBottom: "20px" }}>Collected Revenue vs Expenses vs Realized Net Profit</div>
+            <div className="section-title" style={{ fontSize: "16px", color: "var(--text-primary)" }}>Cash Flow Summary (Realized)</div>
+            <div style={{ fontSize: "12px", color: "var(--text-secondary)", marginBottom: "20px" }}>Collected Revenue vs Expenses vs Net Cash</div>
             <ClientOnly fallback={<div style={{ height: 240 }} />}>
               <ResponsiveContainer width="100%" height={240}>
                 <AreaChart data={monthly} margin={{ top: 15, right: 10, left: -20, bottom: 0 }}>
@@ -353,7 +353,7 @@ export default function FinancePage() {
                   <Tooltip formatter={(v: any) => formatCurrency(Number(v))} contentStyle={{ background: "var(--bg-card)", border: "1px solid var(--bg-border)", borderRadius: "8px", color: "var(--text-primary)", boxShadow: "var(--shadow-card)" }} />
                   <Area type="monotone" dataKey="revenue" stroke="#00b894" fill="rgba(0,184,148,0.1)" strokeWidth={2} name="Collected Revenue" />
                   <Area type="monotone" dataKey="expenses" stroke="#e17055" fill="rgba(225,112,85,0.1)" strokeWidth={2} name="Expenses" />
-                  <Area type="monotone" dataKey="profit" stroke="#6c5ce7" fill="rgba(108,92,231,0.1)" strokeWidth={2} name="Net Profit" />
+                  <Area type="monotone" dataKey="profit" stroke="#6c5ce7" fill="rgba(108,92,231,0.1)" strokeWidth={2} name="Net Cash After Expenses" />
                 </AreaChart>
               </ResponsiveContainer>
             </ClientOnly>

@@ -49,18 +49,25 @@ export async function createServiceOffering(data: {
 
   const code = data.code && isValidNonEmptyString(data.code) ? data.code.trim().toUpperCase() : null;
 
-  const offering = await prisma.serviceOffering.create({
-    data: {
-      name: data.name.trim(),
-      family: data.family as ServiceFamily,
-      code,
-      description: data.description ? data.description.trim() : null,
-      isActive: true,
-    },
-  });
+  try {
+    const offering = await prisma.serviceOffering.create({
+      data: {
+        name: data.name.trim(),
+        family: data.family as ServiceFamily,
+        code,
+        description: data.description ? data.description.trim() : null,
+        isActive: true,
+      },
+    });
 
-  revalidatePath("/dashboard/services");
-  return offering;
+    revalidatePath("/dashboard/services");
+    return offering;
+  } catch (error: any) {
+    if (error?.code === "P2002" || error?.message?.includes("Unique constraint")) {
+      throw new Error("INVALID_INPUT: Service offering code must be unique.");
+    }
+    throw error;
+  }
 }
 
 export async function updateServiceOffering(
@@ -108,13 +115,20 @@ export async function updateServiceOffering(
     updateData.isActive = Boolean(data.isActive);
   }
 
-  const updated = await prisma.serviceOffering.update({
-    where: { id },
-    data: updateData,
-  });
+  try {
+    const updated = await prisma.serviceOffering.update({
+      where: { id },
+      data: updateData,
+    });
 
-  revalidatePath("/dashboard/services");
-  return updated;
+    revalidatePath("/dashboard/services");
+    return updated;
+  } catch (error: any) {
+    if (error?.code === "P2002" || error?.message?.includes("Unique constraint")) {
+      throw new Error("INVALID_INPUT: Service offering code must be unique.");
+    }
+    throw error;
+  }
 }
 
 // ==========================================

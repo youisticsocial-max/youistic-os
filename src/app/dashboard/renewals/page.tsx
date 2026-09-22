@@ -69,7 +69,10 @@ export default function RenewalsDashboardPage() {
   });
 
   // Calculate Summary Metrics
-  const totalRenewalValue = filteredRenewals.reduce(
+  const knownRenewalServices = filteredRenewals.filter(
+    (item) => item.renewalAmount !== null && item.renewalAmount !== undefined
+  );
+  const totalRenewalValue = knownRenewalServices.reduce(
     (sum, item) => sum + (item.renewalAmount || 0),
     0
   );
@@ -122,7 +125,7 @@ export default function RenewalsDashboardPage() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="bg-[#111420] border border-slate-800 rounded-2xl p-4 flex items-center justify-between">
             <div>
-              <div className="text-xs text-slate-400">Total Active Subscriptions Due</div>
+              <div className="text-xs text-slate-400">Renewals in Window</div>
               <div className="text-xl font-bold text-slate-100 mt-1">{filteredRenewals.length}</div>
             </div>
             <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
@@ -132,7 +135,7 @@ export default function RenewalsDashboardPage() {
 
           <div className="bg-[#111420] border border-slate-800 rounded-2xl p-4 flex items-center justify-between">
             <div>
-              <div className="text-xs text-slate-400">Total Upcoming Renewal Value</div>
+              <div className="text-xs text-slate-400">Known Renewal Value</div>
               <div className="text-xl font-bold text-emerald-400 mt-1">{formatCurrency(totalRenewalValue)}</div>
             </div>
             <div className="w-10 h-10 rounded-xl bg-teal-500/10 border border-teal-500/20 flex items-center justify-center text-teal-400">
@@ -142,7 +145,7 @@ export default function RenewalsDashboardPage() {
 
           <div className="bg-[#111420] border border-slate-800 rounded-2xl p-4 flex items-center justify-between">
             <div>
-              <div className="text-xs text-slate-400">Renewal Date Passed</div>
+              <div className="text-xs text-slate-400">Renewal Dates Passed</div>
               <div className="text-xl font-bold text-amber-400 mt-1">{passedCount}</div>
             </div>
             <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
