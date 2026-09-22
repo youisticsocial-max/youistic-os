@@ -37,6 +37,27 @@ enum ServiceType {
   HYBRID
 }
 
+enum ServiceFamily {
+  MEGA_SOFT
+  MEGA_WEB
+  MEGA_APPS
+  FBP
+}
+
+enum ServiceStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum RenewalFrequency {
+  MONTHLY
+  QUARTERLY
+  HALF_YEARLY
+  ANNUAL
+  CUSTOM
+  NONE
+}
+
 enum ClientStatus {
   ACTIVE
   CHURNED
@@ -267,6 +288,7 @@ model Client {
   supportTickets  SupportTicket[]
   revenueEntries  RevenueEntry[]
   assets          ClientAsset[]
+  clientServices  ClientService[]
 
   @@map("clients")
 }
@@ -547,4 +569,49 @@ model ClientAsset {
   @@index([createdAt])
   @@map("client_assets")
 }
+
+// ─────────────────────────────────────────────
+// SERVICE CATALOGUE & CLIENT SERVICES (Phase 2I)
+// ─────────────────────────────────────────────
+
+model ServiceOffering {
+  id          String        @id @default(cuid())
+  name        String        // e.g. "Holaa SaaS", "Custom ERP", "Business Website", "FBP Managed Social"
+  family      ServiceFamily
+  code        String?       @unique // e.g. "HOLAA_SAAS", "MEGA_WEB_AMC"
+  description String?       @db.Text
+  isActive    Boolean       @default(true)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  clientServices ClientService[]
+
+  @@index([family])
+  @@index([isActive])
+  @@map("service_offerings")
+}
+
+model ClientService {
+  id               String           @id @default(cuid())
+  clientId         String
+  client           Client           @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  offeringId       String
+  offering         ServiceOffering  @relation(fields: [offeringId], references: [id], onDelete: Restrict)
+  status           ServiceStatus    @default(ACTIVE)
+  startDate        DateTime?
+  commercialValue  Float?           @default(0) // Commercial value of this specific service/subscription
+  renewalAmount    Float?           @default(0) // Per-service renewal amount
+  renewalFrequency RenewalFrequency @default(ANNUAL)
+  nextRenewalDate  DateTime?
+  notes            String?          @db.Text
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  @@index([clientId])
+  @@index([offeringId])
+  @@index([status])
+  @@index([nextRenewalDate])
+  @@map("client_services")
+}
+
 

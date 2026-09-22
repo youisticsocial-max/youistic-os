@@ -35,3 +35,37 @@ export function isBdeClientAuthorized(clientBdeId: string | null | undefined, us
 export function isValidNonEmptyString(val: any): boolean {
   return typeof val === "string" && val.trim().length > 0;
 }
+
+/**
+ * Checks if a value is a finite non-negative number (>= 0).
+ */
+export function isNonNegativeFiniteAmount(val: any): boolean {
+  const num = typeof val === "number" ? val : Number(val);
+  return Number.isFinite(num) && num >= 0;
+}
+
+const ALLOWED_SERVICE_FAMILIES = new Set(["MEGA_SOFT", "MEGA_WEB", "MEGA_APPS", "FBP"]);
+const ALLOWED_RENEWAL_FREQUENCIES = new Set(["MONTHLY", "QUARTERLY", "HALF_YEARLY", "ANNUAL", "CUSTOM", "NONE"]);
+const ALLOWED_SERVICE_STATUSES = new Set(["ACTIVE", "INACTIVE"]);
+
+/**
+ * Validates ServiceFamily enum.
+ */
+export function isValidServiceFamily(val: any): boolean {
+  return typeof val === "string" && ALLOWED_SERVICE_FAMILIES.has(val);
+}
+
+/**
+ * Validates RenewalFrequency enum.
+ */
+export function isValidRenewalFrequency(val: any): boolean {
+  return typeof val === "string" && ALLOWED_RENEWAL_FREQUENCIES.has(val);
+}
+
+/**
+ * Validates ServiceStatus enum.
+ */
+export function isValidServiceStatus(val: any): boolean {
+  return typeof val === "string" && ALLOWED_SERVICE_STATUSES.has(val);
+}
+
