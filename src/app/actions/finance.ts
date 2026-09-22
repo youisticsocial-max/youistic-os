@@ -212,6 +212,16 @@ export async function createInvoice(data: {
     throw new Error("INVALID_INVOICE_NUMBER: Invoice number cannot be empty.");
   }
 
+  if (data.clientServiceId) {
+    const service = await prisma.clientService.findUnique({
+      where: { id: data.clientServiceId },
+      select: { clientId: true },
+    });
+    if (!service || service.clientId !== data.clientId) {
+      throw new Error("CROSS_CLIENT_SERVICE_MISMATCH: The selected service does not belong to the specified client.");
+    }
+  }
+
   try {
     const invoice = await prisma.invoice.create({
       data: {
