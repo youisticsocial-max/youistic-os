@@ -131,6 +131,25 @@ enum InvoiceStatus {
   OVERDUE
 }
 
+enum FbpContentStage {
+  IDEA
+  SCRIPT
+  SHOOT_SCHEDULED
+  RAW_RECORDED
+  IN_EDIT
+  REVIEW_PENDING
+  APPROVED
+  PUBLISHED
+}
+
+enum FbpPlatform {
+  INSTAGRAM
+  YOUTUBE
+  LINKEDIN
+  TWITTER_X
+  OTHER
+}
+
 enum ProjectType {
   FBP
   TECH
@@ -190,6 +209,7 @@ model User {
   dailyReports       DailyReport[]
   performanceMetrics PerformanceMetric[]
   createdProposals   Proposal[]         @relation("ProposalCreator")
+  assignedFbpContent FbpContentItem[]
 
   @@map("users")
 }
@@ -299,6 +319,7 @@ model Client {
   assets          ClientAsset[]
   clientServices  ClientService[]
   invoices        Invoice[]
+  fbpContentItems FbpContentItem[]
 
   @@map("clients")
 }
@@ -660,12 +681,48 @@ model ClientService {
 
   revenueEntries   RevenueEntry[]
   invoices         Invoice[]
+  fbpContentItems  FbpContentItem[]
 
   @@index([clientId])
   @@index([offeringId])
   @@index([status])
   @@index([nextRenewalDate])
   @@map("client_services")
+}
+
+// ─────────────────────────────────────────────
+// FOUNDER BRAND PROTOCOL (FBP): CONTENT PIPELINE
+// ─────────────────────────────────────────────
+
+model FbpContentItem {
+  id              String          @id @default(cuid())
+  title           String
+  stage           FbpContentStage @default(IDEA)
+  platform        FbpPlatform     @default(INSTAGRAM)
+  scriptUrl       String?
+  rawMediaUrl     String?
+  editedMediaUrl  String?
+  scheduledDate   DateTime?
+  publishedDate   DateTime?
+  notes           String?         @db.Text
+
+  // Relations
+  clientId        String
+  client          Client          @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  clientServiceId String?
+  clientService   ClientService?  @relation(fields: [clientServiceId], references: [id], onDelete: SetNull)
+
+  assignedToId    String?
+  assignedTo      User?           @relation(fields: [assignedToId], references: [id], onDelete: SetNull)
+
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  @@index([clientId])
+  @@index([clientServiceId])
+  @@index([stage])
+  @@map("fbp_content_items")
 }
 
 
