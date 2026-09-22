@@ -73,6 +73,8 @@ export async function createRevenue(data: {
   paymentStatus?: "PAID" | "PENDING" | "OVERDUE";
   description?: string;
   invoiceNumber?: string;
+  clientServiceId?: string;
+  invoiceId?: string;
 }) {
   const session = await requireRole(["ADMIN", "BDE"]);
   if (!isPositiveFiniteAmount(data.amount)) {
@@ -91,6 +93,27 @@ export async function createRevenue(data: {
     }
   }
 
+  // Cross-client attribution checks
+  if (data.clientServiceId) {
+    const service = await prisma.clientService.findUnique({
+      where: { id: data.clientServiceId },
+      select: { clientId: true },
+    });
+    if (!service || service.clientId !== data.clientId) {
+      throw new Error("CROSS_CLIENT_ATTRIBUTION_MISMATCH: The selected service does not belong to the specified client.");
+    }
+  }
+
+  if (data.invoiceId) {
+    const invoice = await prisma.invoice.findUnique({
+      where: { id: data.invoiceId },
+      select: { clientId: true },
+    });
+    if (!invoice || invoice.clientId !== data.clientId) {
+      throw new Error("CROSS_CLIENT_ATTRIBUTION_MISMATCH: The selected invoice does not belong to the specified client.");
+    }
+  }
+
   try {
     const revenue = await prisma.revenueEntry.create({
       data: {
@@ -101,6 +124,8 @@ export async function createRevenue(data: {
         paymentStatus: data.paymentStatus || "PAID",
         description: data.description || null,
         invoiceNumber: data.invoiceNumber || null,
+        clientServiceId: data.clientServiceId || null,
+        invoiceId: data.invoiceId || null,
       },
     });
     try {
