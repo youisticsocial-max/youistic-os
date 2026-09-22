@@ -61,7 +61,7 @@ CREATE INDEX "client_services_status_idx" ON "client_services"("status");
 CREATE INDEX "client_services_nextRenewalDate_idx" ON "client_services"("nextRenewalDate");
 
 -- AddForeignKey
-ALTER TABLE "client_services" ADD CONSTRAINT "client_services_clientId_fkey" FOREIGN KEY ("clientId") REFERENCES "clients"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "client_services" ADD CONSTRAINT "client_services_clientId_fkey" FOREIGN KEY ("clientId") REFERENCES "clients"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "client_services" ADD CONSTRAINT "client_services_offeringId_fkey" FOREIGN KEY ("offeringId") REFERENCES "service_offerings"("id") ON DELETE RESTRICT ON UPDATE CASCADE;

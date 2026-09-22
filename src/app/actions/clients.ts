@@ -93,6 +93,16 @@ export async function deleteClient(id: string) {
   if (!id || typeof id !== "string") {
     throw new Error("INVALID_INPUT: Valid client id is required.");
   }
+
+  // Guard: Protect commercial & renewal service history
+  const serviceCount = await prisma.clientService.count({
+    where: { clientId: id },
+  });
+
+  if (serviceCount > 0) {
+    throw new Error("INVALID_OPERATION: Client cannot be deleted while service history exists.");
+  }
+
   try {
     // Atomic transactional deletion across all dependent relations
     await prisma.$transaction([

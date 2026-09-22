@@ -591,10 +591,11 @@ model ServiceOffering {
   @@map("service_offerings")
 }
 
+// Duplicates remain allowed because no uniqueness business rule has been locked yet.
 model ClientService {
   id               String           @id @default(cuid())
   clientId         String
-  client           Client           @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  client           Client           @relation(fields: [clientId], references: [id], onDelete: Restrict)
   offeringId       String
   offering         ServiceOffering  @relation(fields: [offeringId], references: [id], onDelete: Restrict)
   status           ServiceStatus    @default(ACTIVE)

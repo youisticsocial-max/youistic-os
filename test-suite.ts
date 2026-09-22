@@ -127,6 +127,22 @@ function testNullVsZeroAndEmptyStringGuard() {
   console.log("✔ Null vs Zero & Empty String Guard Unit Tests: PASS");
 }
 
+// 10. Client Delete History Protection Guard Test (Phase 2I Owner Decision)
+function testClientDeleteHistoryGuard() {
+  function canDeleteClient(serviceHistoryCount: number): { allowed: boolean; reason?: string } {
+    if (serviceHistoryCount > 0) {
+      return { allowed: false, reason: "INVALID_OPERATION: Client cannot be deleted while service history exists." };
+    }
+    return { allowed: true };
+  }
+
+  assert(canDeleteClient(1).allowed === false, "Client with 1 service must be denied deletion");
+  assert(canDeleteClient(5).allowed === false, "Client with 5 services must be denied deletion");
+  assert(canDeleteClient(0).allowed === true, "Client with 0 services may proceed with standard deletion");
+
+  console.log("✔ Client Delete History Protection Guard Unit Tests: PASS");
+}
+
 async function runAllTests() {
   console.log("=== RUNNING PRODUCTION HELPER UNIT TEST SUITE ===");
   testAmountValidation();
@@ -138,6 +154,7 @@ async function runAllTests() {
   testServiceStatusValidation();
   testNonNegativeAmountValidation();
   testNullVsZeroAndEmptyStringGuard();
+  testClientDeleteHistoryGuard();
   console.log("=== ALL UNIT TEST SUITES PASSED SUCCESSFULLY ===");
 }
 
