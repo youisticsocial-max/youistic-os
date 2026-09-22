@@ -19,11 +19,14 @@ import {
   AlertCircle,
   FolderCheck,
   Sparkles,
-  Lock
+  Lock,
+  Layers,
+  Plus
 } from "lucide-react";
 import Topbar from "@/components/layout/Topbar";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { getClientById, updateClient } from "@/app/actions/clients";
+import { getServiceOfferings, createClientService } from "@/app/actions/services";
 
 interface Client360PageProps {
   params: Promise<{ clientId: string }>;
@@ -55,6 +58,20 @@ export default function Client360Page({ params }: Client360PageProps) {
   const [editForm, setEditForm] = useState<any>({});
   const [saving, setSaving] = useState(false);
 
+  const [offerings, setOfferings] = useState<any[]>([]);
+  const [isAddingService, setIsAddingService] = useState(false);
+  const [addingService, setAddingService] = useState(false);
+  const [newServiceForm, setNewServiceForm] = useState({
+    offeringId: "",
+    status: "ACTIVE",
+    commercialValue: 0,
+    renewalAmount: 0,
+    renewalFrequency: "ANNUAL",
+    startDate: "",
+    nextRenewalDate: "",
+    notes: "",
+  });
+
   const fetchClientData = async () => {
     setLoading(true);
     setError(null);
@@ -75,11 +92,50 @@ export default function Client360Page({ params }: Client360PageProps) {
           renewalAmount: data.renewalAmount || 0,
         });
       }
+      const offs = await getServiceOfferings(false);
+      setOfferings(offs || []);
     } catch (err: any) {
       console.error("Failed to load Client 360 data:", err);
       setError(err?.message || "Failed to load Client 360 data.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleCreateService = async () => {
+    if (!newServiceForm.offeringId) {
+      alert("Please select a service offering.");
+      return;
+    }
+    setAddingService(true);
+    try {
+      await createClientService({
+        clientId,
+        offeringId: newServiceForm.offeringId,
+        status: newServiceForm.status,
+        commercialValue: Number(newServiceForm.commercialValue) || 0,
+        renewalAmount: Number(newServiceForm.renewalAmount) || 0,
+        renewalFrequency: newServiceForm.renewalFrequency,
+        startDate: newServiceForm.startDate || undefined,
+        nextRenewalDate: newServiceForm.nextRenewalDate || undefined,
+        notes: newServiceForm.notes || undefined,
+      });
+      setIsAddingService(false);
+      setNewServiceForm({
+        offeringId: "",
+        status: "ACTIVE",
+        commercialValue: 0,
+        renewalAmount: 0,
+        renewalFrequency: "ANNUAL",
+        startDate: "",
+        nextRenewalDate: "",
+        notes: "",
+      });
+      await fetchClientData();
+    } catch (err: any) {
+      alert("Error attaching service: " + (err?.message || "Unknown error"));
+    } finally {
+      setAddingService(false);
     }
   };
 
@@ -446,9 +502,170 @@ export default function Client360Page({ params }: Client360PageProps) {
                   <strong className="text-emerald-400">{client.assignedBde?.name || "Unassigned BDE"}</strong>
                 </div>
               </div>
+
+              {/* Relational Client Services & Renewals Card */}
+              <div className="bg-[#111420] border border-slate-800 rounded-2xl p-6 space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-bold text-slate-200 flex items-center gap-2">
+                    <Layers size={16} className="text-emerald-400" />
+                    Active Services & Subscriptions
+                  </h3>
+                  <button
+                    onClick={() => setIsAddingService(!isAddingService)}
+                    className="flex items-center gap-1 text-xs font-semibold text-emerald-400 hover:text-emerald-300 bg-emerald-950/40 hover:bg-emerald-900/50 border border-emerald-800/60 px-2.5 py-1 rounded-lg transition"
+                  >
+                    <Plus size={14} />
+                    {isAddingService ? "Cancel" : "Attach Service"}
+                  </button>
+                </div>
+
+                {isAddingService && (
+                  <div className="bg-slate-950/80 p-4 rounded-xl border border-slate-800 space-y-3 text-xs">
+                    <h4 className="font-bold text-slate-200">Attach New Service Offering</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-slate-400 mb-1">Service Offering</label>
+                        <select
+                          value={newServiceForm.offeringId}
+                          onChange={(e) => setNewServiceForm({ ...newServiceForm, offeringId: e.target.value })}
+                          className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-slate-200"
+                        >
+                          <option value="">Select Offering...</option>
+                          {offerings.map((off: any) => (
+                            <option key={off.id} value={off.id}>
+                              [{off.family}] {off.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-slate-400 mb-1">Status</label>
+                        <select
+                          value={newServiceForm.status}
+                          onChange={(e) => setNewServiceForm({ ...newServiceForm, status: e.target.value })}
+                          className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-slate-200"
+                        >
+                          <option value="ACTIVE">ACTIVE</option>
+                          <option value="INACTIVE">INACTIVE</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-slate-400 mb-1">Commercial Value (₹)</label>
+                        <input
+                          type="number"
+                          value={newServiceForm.commercialValue}
+                          onChange={(e) => setNewServiceForm({ ...newServiceForm, commercialValue: parseFloat(e.target.value) || 0 })}
+                          className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-slate-200"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-slate-400 mb-1">Renewal Amount (₹)</label>
+                        <input
+                          type="number"
+                          value={newServiceForm.renewalAmount}
+                          onChange={(e) => setNewServiceForm({ ...newServiceForm, renewalAmount: parseFloat(e.target.value) || 0 })}
+                          className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-slate-200"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-slate-400 mb-1">Renewal Frequency</label>
+                        <select
+                          value={newServiceForm.renewalFrequency}
+                          onChange={(e) => setNewServiceForm({ ...newServiceForm, renewalFrequency: e.target.value })}
+                          className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-slate-200"
+                        >
+                          <option value="MONTHLY">MONTHLY</option>
+                          <option value="QUARTERLY">QUARTERLY</option>
+                          <option value="HALF_YEARLY">HALF_YEARLY</option>
+                          <option value="ANNUAL">ANNUAL</option>
+                          <option value="CUSTOM">CUSTOM</option>
+                          <option value="NONE">NONE</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-slate-400 mb-1">Next Renewal Date</label>
+                        <input
+                          type="date"
+                          value={newServiceForm.nextRenewalDate}
+                          onChange={(e) => setNewServiceForm({ ...newServiceForm, nextRenewalDate: e.target.value })}
+                          className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-slate-200"
+                        />
+                      </div>
+                    </div>
+                    <div className="flex justify-end gap-2 pt-2">
+                      <button
+                        onClick={handleCreateService}
+                        disabled={addingService}
+                        className="px-3 py-1.5 text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg transition"
+                      >
+                        {addingService ? "Saving..." : "Save Service"}
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {client.clientServices && client.clientServices.length > 0 ? (
+                  <div className="space-y-3">
+                    {client.clientServices.map((svc: any) => (
+                      <div key={svc.id} className="bg-slate-900/70 border border-slate-800 rounded-xl p-3.5 flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs">
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-slate-100">{svc.offering?.name || "Service Offering"}</span>
+                            <span className="px-2 py-0.5 text-[10px] font-bold rounded bg-slate-800 text-emerald-400">
+                              {svc.offering?.family || "UNKNOWN"}
+                            </span>
+                            <span className={`px-2 py-0.5 text-[10px] font-bold rounded ${svc.status === 'ACTIVE' ? 'bg-emerald-950 text-emerald-400 border border-emerald-800' : 'bg-slate-800 text-slate-400'}`}>
+                              {svc.status}
+                            </span>
+                          </div>
+                          <div className="text-slate-400 text-[11px] flex flex-wrap gap-x-4 gap-y-1">
+                            <span>Commercial Value: <strong className="text-slate-200">{formatCurrency(svc.commercialValue || 0)}</strong></span>
+                            <span>Renewal Amount: <strong className="text-teal-300">{formatCurrency(svc.renewalAmount || 0)}</strong></span>
+                            <span>Frequency: <strong className="text-slate-300">{svc.renewalFrequency}</strong></span>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <span className="text-[11px] text-slate-400 block">Next Renewal:</span>
+                          <span className="font-semibold text-slate-200">
+                            {svc.nextRenewalDate ? formatDate(svc.nextRenewalDate) : "No renewal set"}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="bg-slate-900/60 p-4 rounded-xl border border-slate-800 text-center">
+                    <span className="text-xs text-slate-400 font-medium">No relational service subscriptions registered for this client yet.</span>
+                    <p className="text-[11px] text-slate-500 mt-1">Attach specific service offerings to enable per-service renewal tracking.</p>
+                  </div>
+                )}
+              </div>
             </div>
 
             <div className="space-y-6">
+              {/* Legacy Renewal Information Card */}
+              <div className="bg-[#111420] border border-slate-800 rounded-2xl p-6 space-y-3 text-xs">
+                <h3 className="text-sm font-bold text-slate-200 flex items-center gap-2">
+                  <Clock size={16} className="text-amber-400" />
+                  Legacy Renewal Information
+                </h3>
+                <p className="text-[11px] text-slate-400">Aggregate single-service legacy values preserved for backwards compatibility.</p>
+                <div className="space-y-2 pt-1">
+                  <div className="flex justify-between border-b border-slate-800/80 pb-1.5">
+                    <span className="text-slate-400">Legacy Service Type:</span>
+                    <span className="font-semibold text-slate-200">{client.serviceType || "Not set"}</span>
+                  </div>
+                  <div className="flex justify-between border-b border-slate-800/80 pb-1.5">
+                    <span className="text-slate-400">Legacy Renewal Amount:</span>
+                    <span className="font-semibold text-teal-300">{client.renewalAmount ? formatCurrency(client.renewalAmount) : "Not set"}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">Legacy Renewal Date:</span>
+                    <span className="font-semibold text-slate-200">{client.renewalDate ? formatDate(client.renewalDate) : "Not set"}</span>
+                  </div>
+                </div>
+              </div>
+
               {/* Client Properties */}
               <div className="bg-[#111420] border border-slate-800 rounded-2xl p-6 space-y-4 text-xs">
                 <h3 className="text-sm font-bold text-slate-200 mb-3">Account Details</h3>

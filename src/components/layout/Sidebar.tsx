@@ -79,6 +79,12 @@ const navItems = [
         icon: Kanban,
         color: "#74b9ff",
       },
+      {
+        label: "Renewals 🔄",
+        href: "/dashboard/renewals",
+        icon: Zap,
+        color: "#10b981",
+      },
     ],
   },
   {
