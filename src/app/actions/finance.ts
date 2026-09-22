@@ -133,9 +133,12 @@ export async function createRevenue(data: {
       revalidatePath("/ceo/dashboard");
     } catch {}
     return revenue;
-  } catch (error) {
+  } catch (error: any) {
     console.error("Failed to create revenue:", error);
-    throw error;
+    if (error instanceof Error && (error.message.startsWith("INVALID_") || error.message.startsWith("FORBIDDEN") || error.message.startsWith("CROSS_CLIENT"))) {
+      throw error;
+    }
+    throw new Error("REVENUE_CREATION_FAILED: Failed to record revenue entry due to a database error.");
   }
 }
 
@@ -264,9 +267,15 @@ export async function createInvoice(data: {
       revalidatePath("/ceo/dashboard");
     } catch {}
     return invoice;
-  } catch (error) {
+  } catch (error: any) {
     console.error("Failed to create invoice:", error);
-    throw error;
+    if (error?.code === "P2002") {
+      throw new Error("DUPLICATE_INVOICE_NUMBER: An invoice with this invoice number already exists.");
+    }
+    if (error instanceof Error && (error.message.startsWith("INVALID_") || error.message.startsWith("FORBIDDEN") || error.message.startsWith("CROSS_CLIENT"))) {
+      throw error;
+    }
+    throw new Error("INVOICE_CREATION_FAILED: Failed to create invoice due to a database error.");
   }
 }
 

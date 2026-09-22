@@ -67,9 +67,12 @@ export async function createFbpContentItem(data: {
     } catch {}
 
     return item;
-  } catch (error) {
+  } catch (error: any) {
     console.error("Failed to create FBP content item:", error);
-    throw error;
+    if (error instanceof Error && (error.message.startsWith("INVALID_") || error.message.startsWith("FORBIDDEN") || error.message.startsWith("CROSS_CLIENT"))) {
+      throw error;
+    }
+    throw new Error("FBP_CREATION_FAILED: Failed to create FBP content item due to a database error.");
   }
 }
 
@@ -107,9 +110,12 @@ export async function updateFbpContentStage(
     } catch {}
 
     return updated;
-  } catch (error) {
+  } catch (error: any) {
     console.error("Failed to update FBP content stage:", error);
-    throw error;
+    if (error instanceof Error && (error.message.startsWith("NOT_FOUND") || error.message.startsWith("FORBIDDEN"))) {
+      throw error;
+    }
+    throw new Error("FBP_UPDATE_FAILED: Failed to update content stage due to a database error.");
   }
 }
 
