@@ -123,18 +123,7 @@ export async function deleteRawLead(id: string) {
 
 export async function deleteAllLeads() {
   await requireRole(["ADMIN"]);
-  try {
-    await prisma.lead.deleteMany({});
-    try {
-      revalidatePath("/dashboard/sdr");
-      revalidatePath("/dashboard/bde");
-      revalidatePath("/ceo/dashboard");
-    } catch {}
-    return { success: true };
-  } catch (error) {
-    console.error("Failed to delete all leads:", error);
-    throw error;
-  }
+  throw new Error("DISABLED: Bulk deletion of all leads is disabled for data integrity & history protection.");
 }
 
 export async function updateLeadStatus(
