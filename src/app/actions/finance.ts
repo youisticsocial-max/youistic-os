@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { requireRole } from "@/lib/auth";
+import { isPositiveFiniteAmount } from "@/lib/validation";
 
 export async function getFinanceSummary() {
   await requireRole(["ADMIN"]);
@@ -39,10 +40,10 @@ export async function createExpense(data: {
   vendor?: string;
 }) {
   await requireRole(["ADMIN"]);
-  const numericAmount = Number(data.amount);
-  if (!Number.isFinite(numericAmount) || numericAmount <= 0) {
+  if (!isPositiveFiniteAmount(data.amount)) {
     throw new Error("INVALID_AMOUNT: Expense amount must be a positive finite number.");
   }
+  const numericAmount = Number(data.amount);
   try {
     const expense = await prisma.expenseEntry.create({
       data: {
@@ -74,10 +75,10 @@ export async function createRevenue(data: {
   invoiceNumber?: string;
 }) {
   const session = await requireRole(["ADMIN", "BDE"]);
-  const numericAmount = Number(data.amount);
-  if (!Number.isFinite(numericAmount) || numericAmount <= 0) {
+  if (!isPositiveFiniteAmount(data.amount)) {
     throw new Error("INVALID_AMOUNT: Revenue amount must be a positive finite number.");
   }
+  const numericAmount = Number(data.amount);
 
   // IDOR & Scope Check: BDE can only create revenue entries for clients assigned to them
   if (session.role === "BDE") {
