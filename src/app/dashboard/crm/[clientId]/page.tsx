@@ -64,9 +64,9 @@ export default function Client360Page({ params }: Client360PageProps) {
   const [newServiceForm, setNewServiceForm] = useState({
     offeringId: "",
     status: "ACTIVE",
-    commercialValue: 0,
-    renewalAmount: 0,
-    renewalFrequency: "ANNUAL",
+    commercialValue: "",
+    renewalAmount: "",
+    renewalFrequency: "NONE",
     startDate: "",
     nextRenewalDate: "",
     notes: "",
@@ -113,8 +113,8 @@ export default function Client360Page({ params }: Client360PageProps) {
         clientId,
         offeringId: newServiceForm.offeringId,
         status: newServiceForm.status,
-        commercialValue: Number(newServiceForm.commercialValue) || 0,
-        renewalAmount: Number(newServiceForm.renewalAmount) || 0,
+        commercialValue: newServiceForm.commercialValue !== "" ? parseFloat(newServiceForm.commercialValue) : undefined,
+        renewalAmount: newServiceForm.renewalAmount !== "" ? parseFloat(newServiceForm.renewalAmount) : undefined,
         renewalFrequency: newServiceForm.renewalFrequency,
         startDate: newServiceForm.startDate || undefined,
         nextRenewalDate: newServiceForm.nextRenewalDate || undefined,
@@ -124,9 +124,9 @@ export default function Client360Page({ params }: Client360PageProps) {
       setNewServiceForm({
         offeringId: "",
         status: "ACTIVE",
-        commercialValue: 0,
-        renewalAmount: 0,
-        renewalFrequency: "ANNUAL",
+        commercialValue: "",
+        renewalAmount: "",
+        renewalFrequency: "NONE",
         startDate: "",
         nextRenewalDate: "",
         notes: "",
@@ -554,7 +554,7 @@ export default function Client360Page({ params }: Client360PageProps) {
                         <input
                           type="number"
                           value={newServiceForm.commercialValue}
-                          onChange={(e) => setNewServiceForm({ ...newServiceForm, commercialValue: parseFloat(e.target.value) || 0 })}
+                          onChange={(e) => setNewServiceForm({ ...newServiceForm, commercialValue: e.target.value })}
                           className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-slate-200"
                         />
                       </div>
@@ -563,7 +563,7 @@ export default function Client360Page({ params }: Client360PageProps) {
                         <input
                           type="number"
                           value={newServiceForm.renewalAmount}
-                          onChange={(e) => setNewServiceForm({ ...newServiceForm, renewalAmount: parseFloat(e.target.value) || 0 })}
+                          onChange={(e) => setNewServiceForm({ ...newServiceForm, renewalAmount: e.target.value })}
                           className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-slate-200"
                         />
                       </div>
@@ -619,15 +619,15 @@ export default function Client360Page({ params }: Client360PageProps) {
                             </span>
                           </div>
                           <div className="text-slate-400 text-[11px] flex flex-wrap gap-x-4 gap-y-1">
-                            <span>Commercial Value: <strong className="text-slate-200">{formatCurrency(svc.commercialValue || 0)}</strong></span>
-                            <span>Renewal Amount: <strong className="text-teal-300">{formatCurrency(svc.renewalAmount || 0)}</strong></span>
+                            <span>Commercial Value: <strong className="text-slate-200">{svc.commercialValue !== null && svc.commercialValue !== undefined ? formatCurrency(svc.commercialValue) : "Not set"}</strong></span>
+                            <span>Renewal Amount: <strong className="text-teal-300">{svc.renewalAmount !== null && svc.renewalAmount !== undefined ? formatCurrency(svc.renewalAmount) : "Not set"}</strong></span>
                             <span>Frequency: <strong className="text-slate-300">{svc.renewalFrequency}</strong></span>
                           </div>
                         </div>
                         <div className="text-right">
                           <span className="text-[11px] text-slate-400 block">Next Renewal:</span>
                           <span className="font-semibold text-slate-200">
-                            {svc.nextRenewalDate ? formatDate(svc.nextRenewalDate) : "No renewal set"}
+                            {svc.renewalFrequency !== "NONE" && svc.nextRenewalDate ? formatDate(svc.nextRenewalDate) : "No renewal set"}
                           </span>
                         </div>
                       </div>

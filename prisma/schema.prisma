@@ -599,9 +599,9 @@ model ClientService {
   offering         ServiceOffering  @relation(fields: [offeringId], references: [id], onDelete: Restrict)
   status           ServiceStatus    @default(ACTIVE)
   startDate        DateTime?
-  commercialValue  Float?           @default(0) // Commercial value of this specific service/subscription
-  renewalAmount    Float?           @default(0) // Per-service renewal amount
-  renewalFrequency RenewalFrequency @default(ANNUAL)
+  commercialValue  Float?           // Commercial value of this specific service/subscription (null if not provided)
+  renewalAmount    Float?           // Per-service renewal amount (null if not provided)
+  renewalFrequency RenewalFrequency @default(NONE)
   nextRenewalDate  DateTime?
   notes            String?          @db.Text
   createdAt        DateTime         @default(now())

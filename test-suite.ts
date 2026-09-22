@@ -105,6 +105,28 @@ function testNonNegativeAmountValidation() {
   console.log("✔ Non-Negative Amount Validation Unit Tests: PASS");
 }
 
+// 9. Null vs Zero & Empty String Guard Tests (Phase 2I Final Correction)
+function testNullVsZeroAndEmptyStringGuard() {
+  function parseNullableAmount(val: any): number | null {
+    if (val === undefined || val === null || val === "") return null;
+    if (!isNonNegativeFiniteAmount(val)) throw new Error("INVALID_AMOUNT");
+    return Number(val);
+  }
+
+  assert(parseNullableAmount(undefined) === null, "undefined must parse to null");
+  assert(parseNullableAmount(null) === null, "null must parse to null");
+  assert(parseNullableAmount("") === null, "empty string must parse to null (NOT 0)");
+  assert(parseNullableAmount(0) === 0, "explicit 0 must parse to 0");
+  assert(parseNullableAmount("0") === 0, "explicit string '0' must parse to 0");
+  assert(parseNullableAmount(12000) === 12000, "positive amount must parse to number");
+
+  let threwError = false;
+  try { parseNullableAmount(-500); } catch { threwError = true; }
+  assert(threwError === true, "Negative amount must throw error");
+
+  console.log("✔ Null vs Zero & Empty String Guard Unit Tests: PASS");
+}
+
 async function runAllTests() {
   console.log("=== RUNNING PRODUCTION HELPER UNIT TEST SUITE ===");
   testAmountValidation();
@@ -115,6 +137,7 @@ async function runAllTests() {
   testRenewalFrequencyValidation();
   testServiceStatusValidation();
   testNonNegativeAmountValidation();
+  testNullVsZeroAndEmptyStringGuard();
   console.log("=== ALL UNIT TEST SUITES PASSED SUCCESSFULLY ===");
 }
 

@@ -182,15 +182,23 @@ export async function createClientService(data: {
   const status = data.status && isValidServiceStatus(data.status) ? (data.status as ServiceStatus) : ServiceStatus.ACTIVE;
   const renewalFrequency = data.renewalFrequency && isValidRenewalFrequency(data.renewalFrequency)
     ? (data.renewalFrequency as RenewalFrequency)
-    : RenewalFrequency.ANNUAL;
+    : RenewalFrequency.NONE;
 
-  const commercialValue = data.commercialValue !== undefined
-    ? (isNonNegativeFiniteAmount(data.commercialValue) ? Number(data.commercialValue) : 0)
-    : 0;
+  let commercialValue: number | null = null;
+  if (data.commercialValue !== undefined && data.commercialValue !== null && (data.commercialValue as any) !== "") {
+    if (!isNonNegativeFiniteAmount(data.commercialValue)) {
+      throw new Error("INVALID_INPUT: commercialValue must be a non-negative finite number.");
+    }
+    commercialValue = Number(data.commercialValue);
+  }
 
-  const renewalAmount = data.renewalAmount !== undefined
-    ? (isNonNegativeFiniteAmount(data.renewalAmount) ? Number(data.renewalAmount) : 0)
-    : 0;
+  let renewalAmount: number | null = null;
+  if (data.renewalAmount !== undefined && data.renewalAmount !== null && (data.renewalAmount as any) !== "") {
+    if (!isNonNegativeFiniteAmount(data.renewalAmount)) {
+      throw new Error("INVALID_INPUT: renewalAmount must be a non-negative finite number.");
+    }
+    renewalAmount = Number(data.renewalAmount);
+  }
 
   let startDate: Date | null = null;
   if (data.startDate) {
@@ -199,7 +207,7 @@ export async function createClientService(data: {
   }
 
   let nextRenewalDate: Date | null = null;
-  if (data.nextRenewalDate) {
+  if (renewalFrequency !== RenewalFrequency.NONE && data.nextRenewalDate) {
     const parsed = new Date(data.nextRenewalDate);
     if (!isNaN(parsed.getTime())) nextRenewalDate = parsed;
   }
@@ -229,10 +237,10 @@ export async function updateClientService(
   data: {
     status?: string;
     startDate?: string | Date;
-    commercialValue?: number;
-    renewalAmount?: number;
+    commercialValue?: number | null;
+    renewalAmount?: number | null;
     renewalFrequency?: string;
-    nextRenewalDate?: string | Date;
+    nextRenewalDate?: string | Date | null;
     notes?: string;
   }
 ) {
@@ -254,19 +262,29 @@ export async function updateClientService(
     updateData.status = data.status as ServiceStatus;
   }
 
+  let targetFrequency = existing.renewalFrequency;
   if (data.renewalFrequency !== undefined) {
     if (!isValidRenewalFrequency(data.renewalFrequency)) throw new Error("INVALID_INPUT: Invalid renewalFrequency.");
-    updateData.renewalFrequency = data.renewalFrequency as RenewalFrequency;
+    targetFrequency = data.renewalFrequency as RenewalFrequency;
+    updateData.renewalFrequency = targetFrequency;
   }
 
   if (data.commercialValue !== undefined) {
-    if (!isNonNegativeFiniteAmount(data.commercialValue)) throw new Error("INVALID_INPUT: Invalid commercialValue.");
-    updateData.commercialValue = Number(data.commercialValue);
+    if (data.commercialValue === null || (data.commercialValue as any) === "") {
+      updateData.commercialValue = null;
+    } else {
+      if (!isNonNegativeFiniteAmount(data.commercialValue)) throw new Error("INVALID_INPUT: Invalid commercialValue.");
+      updateData.commercialValue = Number(data.commercialValue);
+    }
   }
 
   if (data.renewalAmount !== undefined) {
-    if (!isNonNegativeFiniteAmount(data.renewalAmount)) throw new Error("INVALID_INPUT: Invalid renewalAmount.");
-    updateData.renewalAmount = Number(data.renewalAmount);
+    if (data.renewalAmount === null || (data.renewalAmount as any) === "") {
+      updateData.renewalAmount = null;
+    } else {
+      if (!isNonNegativeFiniteAmount(data.renewalAmount)) throw new Error("INVALID_INPUT: Invalid renewalAmount.");
+      updateData.renewalAmount = Number(data.renewalAmount);
+    }
   }
 
   if (data.startDate !== undefined) {
@@ -279,7 +297,9 @@ export async function updateClientService(
     }
   }
 
-  if (data.nextRenewalDate !== undefined) {
+  if (targetFrequency === RenewalFrequency.NONE) {
+    updateData.nextRenewalDate = null;
+  } else if (data.nextRenewalDate !== undefined) {
     if (data.nextRenewalDate === null || data.nextRenewalDate === "") {
       updateData.nextRenewalDate = null;
     } else {
@@ -314,6 +334,9 @@ export async function getUpcomingRenewals(daysWindow: number = 30) {
 
   const whereClause: any = {
     status: ServiceStatus.ACTIVE,
+    renewalFrequency: {
+      not: RenewalFrequency.NONE,
+    },
     nextRenewalDate: {
       not: null,
       lte: futureDate,
