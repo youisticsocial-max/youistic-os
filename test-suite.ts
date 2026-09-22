@@ -9,6 +9,10 @@ import {
   canRoleAccessProjects,
   isBdeClientAuthorized,
   isValidNonEmptyString,
+  isValidServiceFamily,
+  isValidRenewalFrequency,
+  isValidServiceStatus,
+  isNonNegativeFiniteAmount,
 } from "./src/lib/validation";
 
 function assert(condition: boolean, message: string) {
@@ -61,12 +65,56 @@ function testStringValidation() {
   console.log("✔ String Input Validation Unit Tests (Production Helper): PASS");
 }
 
+// 5. Service Family Validation Tests (Phase 2I)
+function testServiceFamilyValidation() {
+  assert(isValidServiceFamily("MEGA_SOFT") === true, "MEGA_SOFT family should pass");
+  assert(isValidServiceFamily("MEGA_WEB") === true, "MEGA_WEB family should pass");
+  assert(isValidServiceFamily("MEGA_APPS") === true, "MEGA_APPS family should pass");
+  assert(isValidServiceFamily("FBP") === true, "FBP family should pass");
+  assert(isValidServiceFamily("UNKNOWN_FAMILY") === false, "Invalid family should fail");
+  assert(isValidServiceFamily(null) === false, "Null family should fail");
+  console.log("✔ Service Family Validation Unit Tests: PASS");
+}
+
+// 6. Renewal Frequency Validation Tests (Phase 2I)
+function testRenewalFrequencyValidation() {
+  assert(isValidRenewalFrequency("MONTHLY") === true, "MONTHLY frequency should pass");
+  assert(isValidRenewalFrequency("QUARTERLY") === true, "QUARTERLY frequency should pass");
+  assert(isValidRenewalFrequency("HALF_YEARLY") === true, "HALF_YEARLY frequency should pass");
+  assert(isValidRenewalFrequency("ANNUAL") === true, "ANNUAL frequency should pass");
+  assert(isValidRenewalFrequency("CUSTOM") === true, "CUSTOM frequency should pass");
+  assert(isValidRenewalFrequency("NONE") === true, "NONE frequency should pass");
+  assert(isValidRenewalFrequency("WEEKLY") === false, "Invented frequency WEEKLY should fail");
+  console.log("✔ Renewal Frequency Validation Unit Tests: PASS");
+}
+
+// 7. Service Status Validation Tests (Phase 2I)
+function testServiceStatusValidation() {
+  assert(isValidServiceStatus("ACTIVE") === true, "ACTIVE status should pass");
+  assert(isValidServiceStatus("INACTIVE") === true, "INACTIVE status should pass");
+  assert(isValidServiceStatus("EXPIRED") === false, "Unapproved state EXPIRED should fail");
+  console.log("✔ Service Status Validation Unit Tests: PASS");
+}
+
+// 8. Non-Negative Amount Validation Tests (Phase 2I)
+function testNonNegativeAmountValidation() {
+  assert(isNonNegativeFiniteAmount(0) === true, "Zero amount should pass for commercial/renewal value");
+  assert(isNonNegativeFiniteAmount(15000) === true, "Positive amount should pass");
+  assert(isNonNegativeFiniteAmount(-500) === false, "Negative amount should fail");
+  assert(isNonNegativeFiniteAmount(NaN) === false, "NaN should fail");
+  console.log("✔ Non-Negative Amount Validation Unit Tests: PASS");
+}
+
 async function runAllTests() {
   console.log("=== RUNNING PRODUCTION HELPER UNIT TEST SUITE ===");
   testAmountValidation();
   testProjectsRolePolicy();
   testBdeClientOwnership();
   testStringValidation();
+  testServiceFamilyValidation();
+  testRenewalFrequencyValidation();
+  testServiceStatusValidation();
+  testNonNegativeAmountValidation();
   console.log("=== ALL UNIT TEST SUITES PASSED SUCCESSFULLY ===");
 }
 
@@ -74,3 +122,4 @@ runAllTests().catch((err) => {
   console.error("Unit Test Suite Execution Failed:", err);
   process.exit(1);
 });
+
