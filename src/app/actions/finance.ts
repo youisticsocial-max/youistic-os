@@ -131,3 +131,131 @@ export async function updateRevenueStatus(id: string, paymentStatus: "PAID" | "P
     throw error;
   }
 }
+
+// ─────────────────────────────────────────────
+// VALUATION & SERVICE ATTRIBUTION HELPERS
+// Enforces Locked Rules 1-4, 9, 10
+// ─────────────────────────────────────────────
+
+export async function getActiveServiceValue(clientId: string) {
+  await requireRole(["ADMIN", "BDE", "SUPPORT"]);
+  const activeServices = await prisma.clientService.findMany({
+    where: { clientId, status: "ACTIVE" },
+    select: { commercialValue: true },
+  });
+
+  let activeServiceValue = 0;
+  let knownServicesCount = 0;
+  let unknownServicesCount = 0;
+
+  for (const s of activeServices) {
+    if (s.commercialValue !== null && s.commercialValue !== undefined) {
+      activeServiceValue += Number(s.commercialValue);
+      knownServicesCount++;
+    } else {
+      unknownServicesCount++;
+    }
+  }
+
+  return {
+    activeServiceValue,
+    knownServicesCount,
+    unknownServicesCount,
+  };
+}
+
+export async function getLifetimeClientBusinessValue(clientId: string) {
+  await requireRole(["ADMIN", "BDE", "SUPPORT"]);
+  const allServices = await prisma.clientService.findMany({
+    where: { clientId },
+    select: { commercialValue: true },
+  });
+
+  let lifetimeValue = 0;
+  let knownCount = 0;
+  let unknownCount = 0;
+
+  for (const s of allServices) {
+    if (s.commercialValue !== null && s.commercialValue !== undefined) {
+      lifetimeValue += Number(s.commercialValue);
+      knownCount++;
+    } else {
+      unknownCount++;
+    }
+  }
+
+  return {
+    lifetimeValue,
+    knownCount,
+    unknownCount,
+    totalServicesCount: allServices.length,
+  };
+}
+
+export async function createInvoice(data: {
+  clientId: string;
+  invoiceNumber: string;
+  amount: number;
+  clientServiceId?: string;
+  dueDate?: Date | string;
+  notes?: string;
+  status?: "DRAFT" | "ISSUED" | "PAID" | "PARTIAL" | "CANCELLED" | "OVERDUE";
+}) {
+  await requireRole(["ADMIN"]);
+  if (!isPositiveFiniteAmount(data.amount)) {
+    throw new Error("INVALID_AMOUNT: Invoice amount must be a positive finite number.");
+  }
+
+  const numericAmount = Number(data.amount);
+  const cleanInvoiceNumber = data.invoiceNumber.trim();
+  if (!cleanInvoiceNumber) {
+    throw new Error("INVALID_INVOICE_NUMBER: Invoice number cannot be empty.");
+  }
+
+  try {
+    const invoice = await prisma.invoice.create({
+      data: {
+        clientId: data.clientId,
+        invoiceNumber: cleanInvoiceNumber,
+        amount: numericAmount,
+        status: data.status || "ISSUED",
+        clientServiceId: data.clientServiceId || null,
+        dueDate: data.dueDate ? new Date(data.dueDate) : null,
+        notes: data.notes || null,
+      },
+    });
+    try {
+      revalidatePath("/dashboard/finance");
+      revalidatePath("/ceo/dashboard");
+    } catch {}
+    return invoice;
+  } catch (error) {
+    console.error("Failed to create invoice:", error);
+    throw error;
+  }
+}
+
+export async function getInvoicesForClient(clientId: string) {
+  const session = await requireRole(["ADMIN", "BDE"]);
+  if (session.role === "BDE") {
+    const client = await prisma.client.findUnique({
+      where: { id: clientId },
+      select: { assignedBdeId: true },
+    });
+    if (!client || client.assignedBdeId !== session.userId) {
+      throw new Error("FORBIDDEN: You can only view invoices for clients assigned to you.");
+    }
+  }
+
+  return await prisma.invoice.findMany({
+    where: { clientId },
+    include: {
+      clientService: {
+        include: { offering: true },
+      },
+      revenueEntries: true,
+    },
+    orderBy: { issueDate: "desc" },
+  });
+}
+

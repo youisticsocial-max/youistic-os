@@ -122,6 +122,15 @@ enum PaymentStatus {
   OVERDUE
 }
 
+enum InvoiceStatus {
+  DRAFT
+  ISSUED
+  PAID
+  PARTIAL
+  CANCELLED
+  OVERDUE
+}
+
 enum ProjectType {
   FBP
   TECH
@@ -289,6 +298,7 @@ model Client {
   revenueEntries  RevenueEntry[]
   assets          ClientAsset[]
   clientServices  ClientService[]
+  invoices        Invoice[]
 
   @@map("clients")
 }
@@ -363,22 +373,62 @@ model TicketComment {
 // ─────────────────────────────────────────────
 
 model RevenueEntry {
-  id             String        @id @default(cuid())
-  amount         Float
-  paymentDate    DateTime
-  revenueType    ServiceType
-  invoiceNumber  String?
-  paymentStatus  PaymentStatus @default(PAID)
-  description    String?
+  id              String        @id @default(cuid())
+  amount          Float
+  paymentDate     DateTime
+  revenueType     ServiceType
+  invoiceNumber   String?
+  paymentStatus   PaymentStatus @default(PAID)
+  description     String?
 
   // FK
-  clientId       String
-  client         Client        @relation(fields: [clientId], references: [id])
+  clientId        String
+  client          Client        @relation(fields: [clientId], references: [id])
 
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime      @updatedAt
+  clientServiceId String?
+  clientService   ClientService? @relation(fields: [clientServiceId], references: [id], onDelete: SetNull)
 
+  invoiceId       String?
+  invoice         Invoice?       @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@index([clientId])
+  @@index([clientServiceId])
+  @@index([invoiceId])
   @@map("revenue_entries")
+}
+
+// ─────────────────────────────────────────────
+// FINANCE: INVOICES
+// ─────────────────────────────────────────────
+
+model Invoice {
+  id              String        @id @default(cuid())
+  invoiceNumber   String        @unique
+  amount          Float
+  status          InvoiceStatus @default(ISSUED)
+  issueDate       DateTime      @default(now())
+  dueDate         DateTime?
+  notes           String?       @db.Text
+
+  // FK
+  clientId        String
+  client          Client        @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  clientServiceId String?
+  clientService   ClientService? @relation(fields: [clientServiceId], references: [id], onDelete: SetNull)
+
+  revenueEntries  RevenueEntry[]
+
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@index([clientId])
+  @@index([clientServiceId])
+  @@index([status])
+  @@map("invoices")
 }
 
 // ─────────────────────────────────────────────
@@ -607,6 +657,9 @@ model ClientService {
   notes            String?          @db.Text
   createdAt        DateTime         @default(now())
   updatedAt        DateTime         @updatedAt
+
+  revenueEntries   RevenueEntry[]
+  invoices         Invoice[]
 
   @@index([clientId])
   @@index([offeringId])

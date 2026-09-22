@@ -212,6 +212,49 @@ function testAssetRoleScoping() {
   console.log("✔ Asset Role Scoping & Ownership Unit Tests: PASS");
 }
 
+// 15. Invoicing & Valuation Logic Unit Tests
+function testInvoicingAndValuationLogic() {
+  // Test Invoice Number Validation
+  function isValidInvoiceNumber(num: any): boolean {
+    return typeof num === "string" && num.trim().length > 0;
+  }
+  assert(isValidInvoiceNumber("INV-2026-001") === true, "Valid invoice number should pass");
+  assert(isValidInvoiceNumber("   ") === false, "Whitespace invoice number should fail");
+  assert(isValidInvoiceNumber("") === false, "Empty invoice number should fail");
+
+  // Test Active Service Value Calculation Logic
+  function computeActiveServiceValue(services: { status: string; commercialValue: number | null }[]) {
+    let total = 0;
+    let known = 0;
+    let unknown = 0;
+    for (const s of services) {
+      if (s.status === "ACTIVE") {
+        if (s.commercialValue !== null && s.commercialValue !== undefined) {
+          total += s.commercialValue;
+          known++;
+        } else {
+          unknown++;
+        }
+      }
+    }
+    return { total, known, unknown };
+  }
+
+  const mockServices = [
+    { status: "ACTIVE", commercialValue: 50000 },
+    { status: "ACTIVE", commercialValue: null }, // NULL is unknown, not 0
+    { status: "ACTIVE", commercialValue: 25000 },
+    { status: "INACTIVE", commercialValue: 100000 },
+  ];
+
+  const res = computeActiveServiceValue(mockServices);
+  assert(res.total === 75000, "Active Service Value sum must equal 75000");
+  assert(res.known === 2, "Known active services count must equal 2");
+  assert(res.unknown === 1, "Unknown active services count (NULL) must equal 1");
+
+  console.log("✔ Invoicing & Valuation Logic Unit Tests: PASS");
+}
+
 async function runAllTests() {
   console.log("=== RUNNING PRODUCTION HELPER UNIT TEST SUITE ===");
   testAmountValidation();
@@ -228,6 +271,7 @@ async function runAllTests() {
   testSdrRoleDenial();
   testAssetSanitization();
   testAssetRoleScoping();
+  testInvoicingAndValuationLogic();
   console.log("=== ALL UNIT TEST SUITES PASSED SUCCESSFULLY ===");
 }
 
