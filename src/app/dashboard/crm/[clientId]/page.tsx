@@ -214,6 +214,13 @@ export default function Client360Page({ params }: Client360PageProps) {
           </Link>
 
           <div className="flex items-center gap-3">
+            <Link
+              href={`/dashboard/analytics?clientId=${client.id}`}
+              className="px-4 py-2 text-xs font-bold rounded-xl border border-indigo-500/30 bg-indigo-950/30 text-indigo-400 hover:bg-indigo-900/40 transition inline-flex items-center gap-1.5"
+            >
+              <Sparkles size={14} />
+              View in Analytics
+            </Link>
             <button
               onClick={() => setIsEditing(!isEditing)}
               className="px-4 py-2 text-xs font-bold rounded-xl border border-emerald-500/30 bg-emerald-950/30 text-emerald-400 hover:bg-emerald-900/40 transition"
