@@ -323,7 +323,7 @@ export default function FinancePage() {
               <span style={{ fontSize: "10px", color: "var(--text-muted)", background: "var(--bg-border)", padding: "2px 6px", borderRadius: "4px" }}>Realized</span>
             </div>
             <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: "clamp(18px, 3.5vw, 24px)", fontWeight: 800, color: "var(--text-primary)" }}>{formatCurrency(thisMonth.profit)}</div>
-            <div style={{ fontSize: "12px", color: "var(--text-muted)", marginTop: "2px" }}>Net Profit</div>
+            <div style={{ fontSize: "12px", color: "var(--text-muted)", marginTop: "2px" }}>Realized Cash Profit</div>
           </div>
 
           {/* Card 5: ROI % */}
