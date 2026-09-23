@@ -35,7 +35,9 @@ if (parsedUrl.pathname.replace('/', '') !== 'youistic_os_test') {
   process.exit(1);
 }
 
-const prisma = new PrismaClient();
+const prisma = new PrismaClient({
+  datasources: { db: { url: testDbUrl } },
+});
 
 function assert(condition: boolean, msg: string) {
   if (!condition) {
